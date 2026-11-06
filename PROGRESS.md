@@ -23,3 +23,6 @@ M1：三路并行调研（医学约束 10 主题 / 用户研究证据分层 / �
 ## 阻塞
 
 无（github.com 网络曾抖动 3 次，git clone 第 4 次成功，已恢复）
+
+---
+M1 完成（2026-11-07 00:56）：EVIDENCE-LEDGER / PROTOTYPE-BASELINE / DIFF-MATRIX 实测重名率 33% / G1 自动签认。下一步 M2 原型。
