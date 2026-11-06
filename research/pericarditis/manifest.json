@@ -1,0 +1,41 @@
+{
+  "topic": "pericarditis",
+  "year": "2026",
+  "snapshotDate": "2026-11-07",
+  "tool": "unified-trial-mcp @ /Users/qinxiaoqiang/Downloads/unified_search_trials/dist/src/cli/main.js",
+  "queries": [
+    {
+      "keyword": "复发性心包炎",
+      "note": "中文标准名"
+    },
+    {
+      "keyword": "recurrent pericarditis",
+      "note": "英文标准名"
+    },
+    {
+      "keyword": "pericarditis",
+      "note": "宽检索上位词（去重靠登记号）"
+    },
+    {
+      "keyword": "心包炎",
+      "note": "中文宽检索"
+    }
+  ],
+  "perSourceLimit": 200,
+  "recordCount": 97,
+  "dbCount": 97,
+  "sourceStatusRows": 24,
+  "honesty": {
+    "offlineCorpora": "ChiCTR/CDE/CTV 离线语料仅胰腺癌覆盖；复发性心包炎只依赖在线通道终态，见 source_statuses 表",
+    "statusWording": "登记 ≠ 有效 ≠ 安全 ≠ 可入组；状态一律\"登记状态，未核实\"",
+    "mergeRule": "仅同一登记号（NCT/ChiCTR/CDE 等）合并，其余并排保留来源"
+  },
+  "files": {
+    "trials-2026.jsonl": {
+      "sha256": "89ce9eee476b1b295ca663135e12273b75170d5709f771b240d14d5026f414d2"
+    },
+    "pericarditis_trials_2026.sqlite": {
+      "sha256": "bb5f894dac79ad8c51f3b6f0524663d06c4e8a470372a1f1d8d59cdd94815870"
+    }
+  }
+}
