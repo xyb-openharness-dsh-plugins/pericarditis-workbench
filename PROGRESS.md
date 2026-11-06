@@ -45,3 +45,7 @@ M5 完成（2026-11-07）：开发版移植（tak 模式，参照 takayasu-workb
 M5 完成（01:35）：七步移植 tak 模式——public 七件（ui-parity 双闸）、src→build→lib、dsh/{server,store,readmodels,workbench,mineru,demo}、版本十处同源、apiBase 契约、测试 8 文件 34 条；check exit 0 / test 34/34 / audit 44/44 / 探针 27·27/10/10/13·13；V1 自动签认。
 
 M6 完成（01:40）：pack 0.1.0 → check-install 四要素 → pnpm 装入 Desktop profile → bundles/state 登记 → 重启 → verify-desktop-load exit 0（V2 通过）；V3 服务层已验（真机库 20 表全建、演示数据 2/3/25/9）、UI 走查待人工（需会话授权，不冒充截图）。
+
+M7/M8（草稿冻结，未对外）：docs/release-draft/（release notes、BACKLOG #70 回填 patch d80b12b、执行序）。
+M9 完成（01:45）：starter 回流 1.10.0-rc.19——LESSONS L67–L71（聚合数字隐私出口/整页视图焦点回还/SVG 漏根/minmax 窄宽/ROUTES 解析口径）+ 待实施⑧（聚合隐私探针模板、check-ui-parity 上收）；starter 自检 217 files pass、test 67/67；本地 commit df382d0 未 push。下一轮直接受益项：check-ui-parity 家族化 + Q35c 聚合隐私探针模板 + 装机 tgz 绝对路径教训。
+收笔：01:45。全量门禁复测 check 0 / test 34/34 / audit 44/44 / 探针 27·27·10·10·13·13。
