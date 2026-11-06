@@ -1,0 +1,6 @@
+- insert:
+    - id: pericarditis-main
+      name: "@xyb-community/pericarditis-workbench"
+      # 接线前置：宿主把业务资料根目录指向 dshHomePath('pericarditis')
+      config:
+        root: !!js dshHomePath('pericarditis')

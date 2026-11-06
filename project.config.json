@@ -1,0 +1,19 @@
+{
+  "packageName": "@xyb-community/pericarditis-workbench",
+  "title": "小包宝 PeriPal 复发性心包炎工作台",
+  "repository": "https://github.com/xyb-openharness-dsh-plugins/pericarditis-workbench",
+  "description": "本机优先的复发性心包炎发作—缓解记录、CRP/ESR 化验趋势、按次治疗登记、复诊准备工作台（合成演示）",
+  "slug": "pericarditis",
+  "layoutMode": "business-first",
+  "businessWidth": 0.65,
+  "targetUsers": "复发性心包炎患者及照护者；核心诉求是弄清发作规律、化验趋势与按次治疗记录，复诊时能带着清单与医生对话",
+  "scenario": "反复心包炎发作与缓解交替，患者最关心现在缓解第几天、距上次发作多久、近 90 天发作几次；CRP/ESR 化验单散落多家机构需要长期趋势但不同方法不可比；秋水仙碱日常服药与 IL-1 拮抗按次注射要逐条记录；复发恐惧下需要就诊准备与问题清单（认领 Issue #62，罕见病 #70）",
+  "completion": "得到来源可追溯、可核对的个人病程档案：发作—缓解事件带、CRP/ESR 趋势、按次治疗登记、复诊问题清单与多医院就医信息；所有候选信息经用户核对入档，不提供诊断与治疗建议",
+  "coreFlow": [
+    "选择本机资料目录并导入化验/超声/病历报告",
+    "记录一次发作或缓解事件，核对入库",
+    "登记按次治疗（秋水仙碱/IL-1 拮抗/复诊）",
+    "查看 CRP/ESR 趋势与发作—缓解区间带",
+    "生成复诊准备材料与问题清单"
+  ]
+}
