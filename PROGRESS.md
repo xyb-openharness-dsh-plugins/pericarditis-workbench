@@ -26,3 +26,7 @@ M1：三路并行调研（医学约束 10 主题 / 用户研究证据分层 / �
 
 ---
 M1 完成（2026-11-07 00:56）：EVIDENCE-LEDGER / PROTOTYPE-BASELINE / DIFF-MATRIX 实测重名率 33% / G1 自动签认。下一步 M2 原型。
+
+---
+M2 完成（03:10）：原型四件套 + primer 三件套 + demo 两套 + 整页视图；探针 27/27、10/10、13/13；check-primer-links 7/7；check exit 0；test 8/8；Inspector P0×1 清零。G2 自动签认。
+M3 完成（03:10）：schema/0001_initial.sql（档案2/指标3/通用7/专属3/导入3，判读列 0）+ freeze-contract（sha256 4df741ec…）+ check-schema-words 入链 + 内存全建测试 4 条。下一步 M4 临床库。

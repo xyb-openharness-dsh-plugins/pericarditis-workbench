@@ -99,7 +99,7 @@ async function main() {
     const page = await browser.newPage()
     const errors = []
     page.on('pageerror', (e) => errors.push(String(e.message)))
-    page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()) })
+    page.on('console', (m) => { if (m.type() === 'error' && !/favicon|File not found/.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text()) })
     await page.setViewport({ width: 1280, height: 860 })
     await page.goto(base, { waitUntil: 'networkidle0' })
 

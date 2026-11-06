@@ -1,44 +1,70 @@
-# 小包宝 PeriPal 复发性心包炎工作台
+# 小包宝 PeriPal · 复发性心包炎工作台（交互原型 v0.2）
 
-本机优先的复发性心包炎发作—缓解记录、CRP/ESR 化验趋势、按次治疗登记、复诊准备工作台（合成演示）
+本机优先的复发性心包炎发作—缓解记录、CRP/ESR 化验趋势、按次治疗登记、复诊准备工作台（合成演示，未接入宿主）。认领依据：[Issue #62](https://github.com/xyb-openharness-dsh-plugins/.github/issues/62)（罕见病 #70 · R2 · T2）。
 
-这是接入骨架，尚未实现真实业务。初始化后先将 [项目设计提示词](docs/DESIGN-PROMPT.md) 交给当前Agent；它应展示实际路径并以已有用户/场景/流程素材对齐设计者、研究与取舍原则。癌种项目另有 [完整专用提示词](prompts/NEW-CANCER-WORKBENCH.md)。需求见 [BRIEF](docs/BRIEF.md)，规格见 [SPEC](docs/SPEC.md)，任务见 [TASKS](docs/TASKS.md)；先读 [AGENTS](AGENTS.md)。CLI输出交接与首问，实际对话由Agent接续。
+## 疾病概要
 
-## 开发顺序
+复发性心包炎指心包炎症状在无症状间隔后再次出现的慢性病程，属《86 个罕见病病种诊疗指南（2025 年版）》目录第 70 条。患者日常最关心的不是「分型分期」，而是**发作与缓解的规律、炎症化验的趋势、按次治疗的记录、复诊时能带着清单去**。本台按这个优先级组织，全部内容只做事实整理：仅回顾，不解读；不同方法/机构不合并；解读归医生。顶栏「?」可随时打开整页疾病概要（定义 → 医学资料规范和指南情况 → 治疗全景 → 发展趋势，每段带来源行）。
 
-先共创SPEC和候选数据关系，再交付HTML交互工作台；由用户确认对应版本/模块后，复核SCHEMA/API并实现生产功能。确认记录见docs/PROTOTYPE-REVIEW.md；模型不依赖前端Tab/流程。模板骨架不是业务已确认。
+**如实声明：0 患者访谈、0 临床审核**（场景句为改写描述，标注待验证；阈值一律【待核】）。
 
-## 当前能力
+## 关键功能（截图墙）
 
-- 一个 DSH 工作台注册、认证的健康接口、版本展示与标准/大字切换。
-- 已明确选择布局：business-first。business-first 使用 customFrame；模板不创建会话或复制聊天。需要 AI 协助时按官方合同接入原生 conversation 和会话管理。
-- 无业务数据库、无演示患者、无真实密钥；所有业务页按确认 spec 逐项实现。
+### 1. 看板：状态卡 + 医生行动计划原话
+![看板](docs/screenshots/v0.2-01-dashboard-A.png)
+首屏状态卡直接回答「现在缓解第几天、距上次发作多久、近 90 天发作几次」——数字由你记录的发作事件算出，不是医生判断。医生行动计划只照录原话。
 
-## 开发与本地验收
+### 2. 化验一图秀：按方法分组可比线
+![一图秀](docs/screenshots/v0.2-03-onechart-B.png)
+每条线按该指标全期范围归一化，两条线之间「不可比」；单点只画点不连线；不同方法/机构不合并画线；关闭发作带不改数据线。
 
-需要 Node.js 22+、Git、包管理器和可用 DSH Desktop；采用 SQLite 时另核验 node:sqlite 版本条件。宿主 peers 的范围仅是模板基线，请与目标 Desktop 实际依赖核对。
+### 3. 发作—缓解时间线区间带
+![时间线](docs/screenshots/v0.2-04-timeline-B.png)
+色带=一次发作区间，圆点=缓解开始，菱形=治疗或复诊；非肿瘤语义，无 D+N 天数。
+
+### 4. 指标卡 3D 翻转
+![指标卡翻转](docs/screenshots/v0.2-05-metric-flipped.png)
+正面：最近值/差值/次数/来源；背面：走势缩略图。定高 194px，翻转不改变栅格。
+
+### 5. 疾病概要（整页，顶栏「?」或首页入口）
+![疾病概要](docs/screenshots/v0.2-08-disease-primer.png)
+四段固定结构，每段带来源行（原件/官方入口/二次来源/未取得，分开标注），趋势段只写已发生的事实。
+
+### 6. 折叠收/展态（一图秀指标选择）
+![折叠收起](docs/screenshots/v0.2-06-fold-collapsed.png)
+![折叠展开](docs/screenshots/v0.2-07-fold-expanded.png)
+原生 details 折叠；打印与键盘语义保留。
+
+### 7. 整页视图（导出预览，私密过滤）
+![整页视图](docs/screenshots/v0.2-09-page-view.png)
+返回/关闭双入口、Esc 一层一退、history 为导航栈唯一真源；导出预览与看板摘要、AI 上下文共用同一私密过滤函数。
+
+### 8. 其余实渲截图
+- [AI 演示面板](docs/screenshots/v0.2-02-agent-pane.png)（右侧 35% 可拖 25–45%，未接通明说）
+- [设置 · 文档解析 MinerU](docs/screenshots/v0.2-10-settings-mineru.png)（未勾选不上传；本仓未接入如实标注）
+- [窄宽 390](docs/screenshots/v0.2-11-narrow-390.png)（无横向溢出）
+
+## 怎么用
+
+1. 浏览器直接打开 `prototypes/v0.2/index.html`（file:// 可用，全部为合成示例）。
+2. 侧栏「示例档案 A/B」切换两套演示档案：A 刚确诊记录少、B 多年随访发作多次；切换后整页联动，会话与草稿按档案隔离。
+3. 顶栏：资料目录 → AI 对话（演示） → 设置 → 大字 → **?** → 版本。
+4. 「和 AI 讨论」只把草稿填入输入框，不自动发送；发送键在演示态禁用。
+
+## 数据与口径
+
+- 演示数据唯一源：`prototypes/v0.2/demo-data.js`（两套合成档案；页面不写死业务数字）。
+- 口径：仅回顾，不解读；不同方法/机构不合并；解读归医生。私密记录不进看板摘要、导出与 AI 上下文。
+- 阈值、疗程、可及性一律【待核】；本台无试验线前端（裁剪理由见 docs/DEV-PLAN.md §四），临床快照状态在设置页如实显示。
+
+## 开发
 
 ```bash
-npm install
-npm run check
-npm run pack:check
-npm pack
+npm run check   # 静态检查链（含探针覆盖断言）
+npm test        # 单测
+npm run audit   # 家族一致性检查
+node scripts/probe-pericarditis-m2.mjs        # M2 真实浏览器探针（IP/C/MT/Q/A 组）
+node scripts/probe-disease-primer.mjs --url http://127.0.0.1:8127/prototypes/v0.2/index.html
+node scripts/probe-page-view.mjs --url http://127.0.0.1:8127/prototypes/v0.2/index.html
 ```
-
-`npm run check` 只保证"能装"（语法 + 装包合同），第一天就该是绿的。`npm run audit` 管"还是不是家族里的一员"：版本三处一致、`lib/layout.js` 面板参数单一来源、检查链完整、文档与密钥卫生，**只看代码与文件，不看文档自述**。新项目刚生成时 audit 必然有 fail，那是待办清单；交付/发布前必须清零，存在 fail 不得发布（`npm run release:check` 一次跑完两者）。
-
-跑的时间点：**每次改完**跑 `check`；**G2 原型确认后、写业务代码前**先跑一次 `audit`（这时缺的多是 `lib/layout.js`、`VERSION` 这类结构，越早补越便宜）；**交付/装机前**必须跑 `release:check`；**发布或投稿前**把 `npm run audit --json` 的 `xx/xx 通过 · N 失败 · M 待人工` 抄进 `docs/RELEASE.md` 的「家族一致性」一行。`✗` 是结构缺口（补齐，或在 `docs/DEV-REQUIREMENTS-<日期>.md` 写明偏离理由并由用户确认），`!` 是需人工判断的项（逐条给「已人工确认 / 确实没有」）。
-
-`npm install` 可能按 npm 策略解析 peer；勿为消警告重复打包宿主 runtime。客户端本身是单文件；引入 TS/组件库后需添加构建步骤并保留单文件导出。
-
-本地安装入口以当前 Desktop/CLI 帮助为准。安装后按 [docs/06-VALIDATION-AND-RELEASE.md](docs/06-VALIDATION-AND-RELEASE.md) 与官方自测完成真实 UI 验收，并填写 [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md)。静态检查不代表已加载。
-
-Logo 来源与使用限制见 assets/README.md。许可证、作者、仓库/发布策略由本项目维护者确认后填写；模板默认为 private/UNLICENSED。
-
-感谢小x宝社区、DataElement 社区，以及 sam / hhx / 繁华的 ❤️ 贡献。
-
-初始化来源记录见 `.dsh-wb-starter.json`。更新社区脚手架不会覆盖本项目；需要升级时先用相同确认配置在临时目录生成，再审阅差异。CLI 用法见 [docs/CLI-GIT.md](docs/CLI-GIT.md)。
-
-## HTML先行与数据演进
-
-业务开发前先交付HTML交互工作台原型、实际预览并由用户确认版本/hash和范围。数据设计先区分领域事实、流程状态和页面读模型，走查前端/流程变化、兼容与迁移；原型对象不直接作为表。见[规范](docs/14-HTML-AND-DATA-CONTRACT.md)。
+版本 v0.2.0（原型）；文档九件见 docs/；各闸口签认见 docs/signoffs/。

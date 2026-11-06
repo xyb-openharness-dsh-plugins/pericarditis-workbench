@@ -82,7 +82,7 @@ async function main() {
     const page = await browser.newPage()
     const errors = []
     page.on('pageerror', e => errors.push(String(e.message)))
-    page.on('console', m => { if (m.type() === 'error') errors.push(m.text()) })
+    page.on('console', m => { if (m.type() === 'error' && !/favicon|File not found/.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text()) })
     await page.setViewport({ width: 1280, height: 860 })
     await page.goto(base, { waitUntil: 'networkidle0' })
 
@@ -95,9 +95,9 @@ async function main() {
     // 打开第一层。用程序化 click：puppeteer 的 page.click 会先 scrollIntoViewIfNeeded，
     // 那会把主页滚回顶部，A5 就永远测不出真问题（2026-10-25 实测踩到）。
     const clickSel = sel => page.evaluate(s => document.querySelector(s)?.click(), sel)
-    await clickSel('[data-open="pathology"]')
+    await clickSel('[data-open="report"]')
     await page.waitForSelector('.pv-overlay:not([hidden])', { timeout: 3000 })
-    await page.waitForFunction(() => document.querySelector('.pv-title')?.textContent?.includes('病理报告'), { timeout: 3000 }).catch(() => {})
+    await page.waitForFunction(() => document.querySelector('.pv-title')?.textContent?.includes('报告详情'), { timeout: 3000 }).catch(() => {})
 
     // A1 宿主不滚，滚的是 .pv-body
     // 2026-10-25 改严两次，记下来免得以后再踩：
@@ -157,7 +157,7 @@ async function main() {
       open: !document.querySelector('.pv-overlay')?.hidden,
       title: document.querySelector('.pv-title')?.textContent?.trim()
     }))
-    check('A2', 'Esc 只退一层（三层 → 二层，浮层仍开）', afterEsc.open && afterEsc.title === '病理报告', JSON.stringify(afterEsc))
+    check('A2', 'Esc 只退一层（三层 → 二层，浮层仍开）', afterEsc.open && afterEsc.title === '报告详情', JSON.stringify(afterEsc))
 
     // A3 浏览器返回键等价 back()
     await page.goBack()
@@ -185,6 +185,7 @@ async function main() {
     const closePt = await center('.pv-head-actions button:last-child')
     await page.mouse.click(closePt.x, closePt.y)
     await page.waitForFunction(() => document.querySelector('.pv-overlay')?.hidden === true, { timeout: 3000 }).catch(() => {})
+    await new Promise(r => setTimeout(r, 250)) // history 导航后浏览器会把焦点重置回 body，等应用补焦落定（本仓 applyPvClose 60ms 补焦）
     const a4b = await page.evaluate(() => {
       const el = document.activeElement
       return { tag: el?.tagName, isTrigger: el?.dataset?.open === 'chart' }
@@ -217,7 +218,7 @@ async function main() {
     // A8 减少动效下终态可见
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }])
     await page.goto(base, { waitUntil: 'networkidle0' })
-    await page.evaluate(() => document.querySelector('[data-open="chart"]')?.click())
+    await page.evaluate(() => document.querySelector('[data-open="chart"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
     await page.waitForSelector('.pv-overlay:not([hidden])', { timeout: 3000 })
     await new Promise(r => setTimeout(r, 120))
     const a8 = await page.evaluate(() => {

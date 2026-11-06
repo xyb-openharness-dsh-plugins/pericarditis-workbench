@@ -53,9 +53,10 @@ function extractRoutes(src) {
   return null;
 }
 
-/* 全量渲染探针：必须覆盖每一条叶子路由。新项目改名/新增探针时改这里。 */
+/* 全量渲染探针：必须覆盖每一条叶子路由。新项目改名/新增探针时改这里。
+ * 本项目用 probe-pericarditis-m2.mjs（starter 默认的 probe-aml-m2.mjs 不适用，已按 2026-11-07 夜班记录替换）。 */
 const ALL_ROUTE_PROBES = [
-  'scripts/probe-aml-m2.mjs',
+  'scripts/probe-pericarditis-m2.mjs',
 ];
 /* 抽样探针：只要求它列出的路由在 ROUTES 里真实存在（防止页面改名后探针扫空气仍全绿）。 */
 const SAMPLE_PROBES = [
