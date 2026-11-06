@@ -1,0 +1,31 @@
+From d80b12b76365537c7b6f5669453d5b85dd52d346 Mon Sep 17 00:00:00 2001
+From: samqin123 <samqin123@users.noreply.github.com>
+Date: Sat, 7 Nov 2026 01:08:40 +0800
+Subject: [PATCH] =?UTF-8?q?BACKLOG:=20#70=20=E5=A4=8D=E5=8F=91=E6=80=A7?=
+ =?UTF-8?q?=E5=BF=83=E5=8C=85=E7=82=8E=20=E7=8A=B6=E6=80=81=E5=9B=9E?=
+ =?UTF-8?q?=E5=A1=AB=EF=BC=88=E8=AE=A4=E9=A2=86=20Issue=20#62=EF=BC=8Cv0.1?=
+ =?UTF-8?q?.0=20=E5=BC=80=E5=8F=91=E4=B8=AD=EF=BC=89?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ BACKLOG.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/BACKLOG.md b/BACKLOG.md
+index 259b1fe..3f86db7 100644
+--- a/BACKLOG.md
++++ b/BACKLOG.md
+@@ -327,7 +327,7 @@
+ | 63 | 原发性胆汁性胆管炎 | 371 | T1 | 🟡 [pbc-workbench](https://github.com/xyb-openharness-dsh-plugins/pbc-workbench) v0.2.7（2026-10-25 认领，小管宝 DuctPal；包已装 / 探针全绿，**G1–G3 待签认、真机未确认**） | 已认领 · 👤🤝📝🩺 |
+ | 68 | 原发性硬化性胆管炎 | 401 | T2 | ⬜ 招募中 | 👤🤝📝 |
+ | 69 | 进行性纤维化性间质性肺疾病 | 408 | T1 | 🔵 [pf-ild-workbench](https://github.com/xyb-openharness-dsh-plugins/pf-ild-workbench) v0.2.1（2026-10-25 认领，小呼宝 BreathPal；G1 已签 · V1 通过 · V2/V3 未验） | 🩺📝 补位 |
+-| 70 | 复发性心包炎 | 412 | T2 | ⬜ 招募中 | 👤🤝📝 |
++| 70 | 复发性心包炎 | 412 | T2 | 🔵 [pericarditis-workbench](https://github.com/xyb-openharness-dsh-plugins/pericarditis-workbench) v0.1.0（2026-11-07 认领开工，[Issue #62](https://github.com/xyb-openharness-dsh-plugins/.github/issues/62)；M0–M4 自动签认：原型探针 27/27·10/10·13/13、schema 冻结、临床库 97 条；开发版移植中） | 👤🤝📝🩺 补位 |
+ | 73 | 短肠综合征 | 428 | T2 | ⬜ 招募中 | 👤🤝📝 |
+ | 76 | 大动脉炎 | 454 | T1 | 🔥 优先招募 | 👤🤝📝🩺 |
+ | 79 | 血栓性血小板减少性紫癜 | 472 | T2 | ⬜ 招募中 | 👤🤝📝 |
+-- 
+2.46.0
+
