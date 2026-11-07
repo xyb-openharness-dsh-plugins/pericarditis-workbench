@@ -55,7 +55,11 @@
 ![整页视图](docs/screenshots/v0.2-09-page-view.png)
 返回/关闭双入口、Esc 一层一退、history 为导航栈唯一真源；导出预览与看板摘要、AI 上下文共用同一私密过滤函数。
 
-### 8. 设置弹层 / 临床页 / 指标分组（0.1.1 晨审修复）
+### 8. 设置弹层 / 临床线 / 指标分组（0.1.1–0.1.2 晨审修复）
+![匹配](docs/screenshots/v0.2-15-trial-match.png)
+「临床 · 匹配」：35 号四段链路（建档→检索→匹配→收藏），分数方块 + 「n / m 项对得上 · k 项待确认」+ 逐条证据链，百分数只在展示层算。
+![添加按钮](docs/screenshots/v0.2-16-add-buttons.png)
+六个可写页头部统一「＋ 添加记录」主按钮；化验/报告/感受/家人表单补齐，三态保存连续录入。
 ![设置弹层](docs/screenshots/v0.2-12-settings-dialog.png)
 设置=顶栏弹层三 tab（工作区/文档解析 MinerU/临床数据库），乳腺癌同款交互。
 ![指标分组](docs/screenshots/v0.2-13-metric-groups-B.png)

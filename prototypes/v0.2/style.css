@@ -257,3 +257,17 @@ html.pv-lock { overflow: hidden; }
 .stat-tile h3 { font-size: 13.5px; color: var(--ink-2); }
 .stat-tile .tile-val b { font-size: 26px; color: var(--brand-deep); }
 .stat-tile .tile-val span { font-size: 12px; color: var(--muted); }
+
+/* 匹配卡（35 号 E4）+ 右侧详情浮窗 */
+.score-box { flex: 0 0 auto; width: 96px; min-height: 96px; border-radius: var(--radius-sm); background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; }
+.score-box b { font-size: 28px; color: var(--brand-deep); }
+.score-box span { font-size: 11px; color: var(--muted); }
+.score-box.off { background: var(--paper); }
+.score-box.off b { color: var(--muted); font-size: 18px; }
+.match-head { display: flex; gap: 12px; align-items: flex-start; }
+.match-main { flex: 1; min-width: 0; }
+.match-side { flex: 0 0 auto; }
+.trial-detail { position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 46%); background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--shadow); z-index: 75; display: flex; flex-direction: column; }
+.trial-detail .pv-head { border-bottom: 1px solid var(--line); }
+.trial-detail .pv-body { flex: 1; overflow: auto; padding: 14px; }
+@media (max-width: 900px) { .trial-detail { width: 100%; } }

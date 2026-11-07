@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { FILES, expected, OUT } from './migrate-public.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const BYTE_COPY = ['style.css', 'demo-data.js', 'primer-data.js', 'primer.js', 'primer.css'];
+const BYTE_COPY = ['style.css', 'demo-data.js', 'primer-data.js', 'primer.js', 'primer.css', 'trial-match.js'];
 const problems = [];
 
 for (const f of BYTE_COPY) {
@@ -34,4 +34,4 @@ if (problems.length) {
   console.error('✗ ui-parity 不一致：\n  ' + problems.join('\n  '));
   process.exit(1);
 }
-console.log('✓ ui-parity：public/ 七件与 prototypes/v0.2 定点移植一致（五件逐字节、两件仅白名单替换点）');
+console.log('✓ ui-parity：public/ 八件与 prototypes/v0.2 定点移植一致（六件逐字节、两件仅白名单替换点）');

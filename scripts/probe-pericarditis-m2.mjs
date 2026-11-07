@@ -19,7 +19,7 @@ const PORT = Number(argOf('--port') || 8137)
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' }
 
 /* 全量叶子路由（与 app.js 顶层 ROUTES 一一对应；漏一条 check-probe-coverage 就会红） */
-const LEAF_ROUTES = ['dash', 'events/list', 'events/timeline', 'labs/list', 'labs/chart', 'treatment/log', 'treatment/meds', 'visits/prep', 'visits/hospitals', 'reports/list', 'reports/wall', 'mind/feel', 'mind/family', 'records/archive', 'records/metrics', 'records/summary', 'clinical/status', 'clinical/browse']
+const LEAF_ROUTES = ['dash', 'events/list', 'events/timeline', 'labs/list', 'labs/chart', 'treatment/log', 'treatment/meds', 'visits/prep', 'visits/hospitals', 'reports/list', 'reports/wall', 'mind/feel', 'mind/family', 'records/archive', 'records/metrics', 'records/summary', 'clinical/facts', 'clinical/search', 'clinical/match', 'clinical/saved']
 
 function findChrome() {
   if (process.env.CHROME_PATH && existsSync(process.env.CHROME_PATH)) return process.env.CHROME_PATH
@@ -90,7 +90,7 @@ async function main() {
     app.state.page = 'dash'; app.render()
     return { covered: covered.length, total: routes.length, orphans }
   }, LEAF_ROUTES)
-  t('IP2', '18 条叶子路由全部渲染非空（孤儿页=0，先证有内容）', walk.covered === walk.total && walk.orphans.length === 0, { covered: walk.covered, total: walk.total, orphans: walk.orphans })
+  t('IP2', '20 条叶子路由全部渲染非空（孤儿页=0，先证有内容）', walk.covered === walk.total && walk.orphans.length === 0, { covered: walk.covered, total: walk.total, orphans: walk.orphans })
 
   /* ---------- X2：深链接直达 ---------- */
   await page.evaluate(() => { location.hash = '#records/metrics' })
@@ -296,15 +296,75 @@ async function main() {
   }))
   await page.evaluate(() => document.querySelector('[data-action="dialog-close"]').click())
   t('CFG1', '设置弹层打开且三 tab（工作区/MinerU/临床数据库）', cfg.open && cfg.tabs.join('|') === '工作区|文档解析（MinerU）|临床数据库', cfg)
-  await page.evaluate(() => { const a = window.__PERI_APP__; a.state.page = 'clinical'; a.state.sub.clinical = 'browse'; a.render() })
-  const clin = await page.evaluate(() => ({ rows: document.querySelectorAll('#trial-result tbody tr').length, noIndex: !document.querySelector('#main').innerText.includes('匹配指数'), demo: document.querySelector('#main').innerText.includes('虚构示例') }))
-  t('CLIN1', '临床登记浏览有内容且无匹配指数（虚构示例明示）', clin.rows >= 5 && clin.noIndex && clin.demo, clin)
+  await page.evaluate(() => { const a = window.__PERI_APP__; a.state.page = 'clinical'; a.state.sub.clinical = 'facts'; a.render() })
+  const facts = await page.evaluate(() => ({ rows: document.querySelectorAll('#main tbody tr').length, confirmed: document.querySelector('#main').innerText.includes('已确认入库') }))
+  t('CLIN0', '建档页：档案字段网格 + 已确认入库口径', facts.rows >= 4 && facts.confirmed, facts)
+  await page.evaluate(() => { const a = window.__PERI_APP__; a.state.sub.clinical = 'match'; a.render() })
+  const match = await page.evaluate(() => {
+    const txt = document.querySelector('#main').innerText
+    return {
+      cards: document.querySelectorAll('.match-card').length,
+      score: txt.includes('登记字段符合度'),
+      nm: /项对得上/.test(txt) || txt.includes('可对照项不足'),
+      chain: txt.includes('证据链'),
+      pool: txt.includes('候选池口径'),
+      noFake: !txt.includes('入选概率'),
+      enroll: txt.includes('入排标准请到官方登记页核对')
+    }
+  })
+  t('CLIN1', '匹配页：分数方块 + n/m 行 + 证据链 + 候选池口径 + 无入选概率', match.cards >= 5 && match.score && match.nm && match.chain && match.pool && match.noFake && match.enroll, match)
+  /* 35 号纯函数：可对照不足 2 不给分；靶点不进分母（签名不收靶点） */
+  const tm = await page.evaluate(() => {
+    const M = window.PeriTrialMatch
+    const rel = M.items({ title: '（虚构示例）心包炎登记研究', studyType: '介入性' }, { type: 'interventional' })
+    const irr = M.items({ title: '（虚构示例）糖尿病足溃疡敷料研究', studyType: '观察性' }, { type: 'interventional' })
+    return {
+      relScore: M.score(rel), irrScore: M.score(irr),
+      relItems: rel.map(i => i.state).join(''),
+      irrHard: irr.some(i => i.hard && i.state === '✕'),
+      noTargetArg: M.items.length === 2
+    }
+  })
+  t('CLIN2', '匹配纯函数：相关=可对照给分、不相关=硬性✕ 且分数诚实', tm.relScore.pct === 100 && tm.irrScore.pct === 0 && tm.relItems.includes('✓') && tm.irrHard && tm.noTargetArg, tm)
   await page.evaluate(() => { const a = window.__PERI_APP__; a.state.page = 'dash'; a.render() })
   const tiles = await page.evaluate(() => ({ tiles: document.querySelectorAll('.stat-tile').length, groups: window.__PERI_APP__ ? ['CRP','ESR','WBC','cTnI','NT-proBNP','ALT','Cr','体温'].length : 0 }))
   t('TILE1', '看板关键指标最近值卡 ≥5 张（指标体系扩充）', tiles.tiles >= 5, tiles)
   await page.evaluate(() => { const a = window.__PERI_APP__; a.state.page = 'records'; a.state.sub.records = 'metrics'; a.render() })
   const mcards = await page.evaluate(() => ({ n: document.querySelectorAll('.mcard').length, groups: document.querySelectorAll('.metric-group').length }))
   t('MC1', '指标检测页指标卡 ≥7 张、分组 ≥4（8 指标 5 组，按有数据渲染）', mcards.n >= 7 && mcards.groups >= 4, mcards)
+
+  /* ---------- 晨审二轮回归：添加记录按钮 + 缺失表单 + 翻转双通道 ---------- */
+  const addBtns = await page.evaluate(() => {
+    const a = window.__PERI_APP__
+    const out = {}
+    for (const pg of ['events', 'labs', 'treatment', 'visits', 'reports', 'mind']) {
+      a.state.page = pg
+      a.state.sub[pg] = ({ events: 'list', labs: 'list', treatment: 'log', visits: 'prep', reports: 'list', mind: 'feel' })[pg]
+      a.render()
+      out[pg] = document.querySelector('#main').innerText.includes('＋')
+    }
+    return out
+  })
+  t('ADD1', '六个可写页都有「＋添加记录」入口', Object.values(addBtns).every(Boolean), addBtns)
+  const forms = await page.evaluate(() => {
+    const a = window.__PERI_APP__
+    const out = {}
+    a.state.page = 'labs'; a.state.sub.labs = 'list'; a.render(); out.labs = !!document.querySelector('#form-lab')
+    a.state.page = 'reports'; a.state.sub.reports = 'list'; a.render(); out.reports = !!document.querySelector('#form-report')
+    a.state.page = 'mind'; a.state.sub.mind = 'feel'; a.render(); out.feel = !!document.querySelector('#form-feel')
+    return out
+  })
+  t('ADD2', '化验/报告/感受录入表单补齐（≤6 字段、三态保存）', forms.labs && forms.reports && forms.feel, forms)
+  const flip2 = await page.evaluate(async () => {
+    const a = window.__PERI_APP__
+    a.state.flipped = {}; /* 前序 C12 已把卡 0 翻过：先归零再测双通道 */
+    a.state.page = 'records'; a.state.sub.records = 'metrics'; a.render()
+    const c = document.querySelectorAll('.mcard')[0]
+    c.click()
+    await new Promise(r => setTimeout(r, 700))
+    return { pressed: c.getAttribute('aria-pressed'), cls: c.className.includes('flipped'), tf: getComputedStyle(c.querySelector('.mcard-inner')).transform }
+  })
+  t('FLIP2', '翻转双通道（aria-pressed + flipped class，终态 matrix3d 含 rotateY）', flip2.pressed === 'true' && flip2.cls && /matrix3d/.test(flip2.tf) && flip2.tf.includes('-1'), flip2)
 
   /* ---------- Q26：390 宽无横向溢出（CDP） ---------- */
   const client = await page.target().createCDPSession()

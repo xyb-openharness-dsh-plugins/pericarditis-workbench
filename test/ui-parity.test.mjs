@@ -12,9 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { FILES, expected, OUT } from '../scripts/migrate-public.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const BYTE_COPY = ['style.css', 'demo-data.js', 'primer-data.js', 'primer.js', 'primer.css'];
+const BYTE_COPY = ['style.css', 'demo-data.js', 'primer-data.js', 'primer.js', 'primer.css', 'trial-match.js'];
 
-test('ui-parity: 五件纯复制文件与原型逐字节相同', () => {
+test('ui-parity: 六件纯复制文件与原型逐字节相同', () => {
   for (const f of BYTE_COPY) {
     const proto = readFileSync(join(ROOT, 'prototypes/v0.2', f));
     const pub = readFileSync(join(OUT, f));

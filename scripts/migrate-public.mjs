@@ -20,7 +20,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SRC = join(ROOT, 'prototypes/v0.2');
 const OUT = join(ROOT, 'public');
 const CHECK = process.argv.includes('--check');
-const FILES = ['index.html', 'app.js', 'style.css', 'demo-data.js', 'primer-data.js', 'primer.js', 'primer.css'];
+const FILES = ['index.html', 'app.js', 'style.css', 'demo-data.js', 'primer-data.js', 'primer.js', 'primer.css', 'trial-match.js'];
 
 const TITLE_OLD = '<title>小包宝 PeriPal · 复发性心包炎工作台（交互原型 v0.2）</title>';
 const TITLE_NEW = '<title>小包宝 PeriPal · 复发性心包炎工作台</title>\n<meta name="robots" content="noindex,nofollow">';

@@ -30,7 +30,7 @@
     reports: [['list', '最近报告'], ['wall', '原件墙']],
     mind: [['feel', '当下感受'], ['family', '家庭与照护']],
     records: [['archive', '病情档案'], ['metrics', '指标检测'], ['summary', '病情汇总']],
-    clinical: [['status', '数据库状态'], ['browse', '登记浏览']]
+    clinical: [['facts', '建档'], ['search', '检索'], ['match', '匹配'], ['saved', '收藏与跟踪']]
   }
   var SUBTITLES = {
     dash: '状态与最近变化都由你记录的事实算出；本台只回顾，不解读。',
@@ -69,6 +69,7 @@
     picked: (function () { var o = {}; (DATA.metricDefs || []).forEach(function (d) { o[d.key] = (d.key === 'CRP' || d.key === 'ESR') }); return o })(),
     showEpisodes: true,
     flipped: {},
+    trialPref: 'all',
     agentOpen: false,
     sessions: {},
     draft: {}
@@ -160,6 +161,10 @@
     return '<nav class="subnav" role="tablist" aria-label="二级页签">' + subs.map(function (s) {
       return '<button role="tab" aria-selected="' + (s[0] === cur) + '" data-action="sub" data-sub="' + s[0] + '">' + esc(s[1]) + '</button>'
     }).join('') + '</nav>'
+  }
+  /* 显式添加入口（F 系盘点）：每个可写页头部一个主按钮，滚动到表单 */
+  function addBtn(form, label) {
+    return '<button class="primary" data-action="show-form" data-form="' + form + '">＋ ' + esc(label) + '</button>'
   }
   function aiPromptFor(page) {
     var p = profile()
@@ -279,6 +284,7 @@
   function eventsList() {
     var p = profile()
     var rows = p.flaps.slice().sort(function (a, b) { return a.start < b.start ? 1 : -1 })
+    var addbar = '<div class="actions" style="margin-bottom:12px">' + addBtn('flap', '记一次发作') + '<span class="small-note">缓解后再补一条结束日期；连续录入不清屏</span></div>'
     var listHtml = rows.length
       ? '<div class="list">' + rows.map(function (f) {
           var len = f.end ? daysBetween(f.start, f.end) + 1 : daysBetween(f.start, TODAY) + 1
@@ -287,7 +293,7 @@
             '<button class="linkish" data-action="flap-priv" data-id="' + f.id + '">' + (f.private ? '改为共享' : '改为私密') + '</button></div>'
         }).join('') + '</div>'
       : '<div class="empty">还没有发作记录。<div class="actions" style="justify-content:center;margin-top:8px"><button data-action="show-form" data-form="flap">记第一次发作 →</button></div></div>'
-    return listHtml + eventForm() + '<p class="notice plain">' + esc(privacyLine(p.flaps) || '记满一条后，这里会显示私密条数说明。') + '</p>'
+    return addbar + listHtml + eventForm() + '<p class="notice plain">' + esc(privacyLine(p.flaps) || '记满一条后，这里会显示私密条数说明。') + '</p>'
   }
   function eventForm() {
     var d = state.draft.flap || {}
@@ -364,8 +370,25 @@
       }).join('')
       return section(g.title, '不同方法/机构不合并；解读归医生') + tables
     }).join('')
-    return (groups || '<div class="empty">还没有化验记录。<div class="actions" style="justify-content:center;margin-top:8px"><button data-action="go" data-page="reports">先去登记报告 →</button></div></div>') +
+    var addbar = '<div class="actions" style="margin-bottom:12px">' + addBtn('lab', '录一条化验') + '</div>'
+    return addbar + (groups || '<div class="empty">还没有化验记录。<div class="actions" style="justify-content:center;margin-top:8px"><button data-action="go" data-page="reports">先去登记报告 →</button></div></div>') +
+      labForm() +
       '<p class="notice plain">' + esc(privacyLine(p.labs) || '本页暂无私密标记说明。') + '</p>'
+  }
+  /* 化验录入（F2）：指标/日期/数值/单位/方法/机构 = 6 字段；三态保存 */
+  function labForm() {
+    var d = state.draft.lab || {}
+    var opts = METRIC_ORDER.map(function (m) { return '<option' + (d.metric === m ? ' selected' : '') + '>' + esc(m) + '</option>' }).join('')
+    return '<section class="card" id="form-lab"><h3>录一条化验</h3>' +
+      '<div class="form-grid">' +
+      '<label>指标<span class="req">*</span><select data-draft="lab.metric">' + opts + '</select></label>' +
+      '<label>日期<span class="req">*</span><input type="date" data-draft="lab.date" value="' + esc(d.date || '') + '"></label>' +
+      '<label>结果<span class="req">*</span><input type="text" inputmode="decimal" data-draft="lab.value" value="' + esc(d.value || '') + '"></label>' +
+      '<label>单位<input type="text" data-draft="lab.unit" value="' + esc(d.unit || '') + '" placeholder="mg/L"></label>' +
+      '<label>方法<input type="text" data-draft="lab.method" value="' + esc(d.method || '') + '" placeholder="免疫比浊"></label>' +
+      '<label>机构<input type="text" data-draft="lab.org" value="' + esc(d.org || '') + '" placeholder="示例市第一医院"></label>' +
+      '</div><div class="actions"><button class="primary" data-action="save-lab-continue">保存并继续录入</button><button data-action="save-lab-close">保存并关闭</button><button data-action="cancel-form" data-form="lab">取消</button></div>' +
+      '<p class="small-note">不同方法/机构不合并、不做差；解读归医生。本原型演示录入，不真实持久化（刷新重置）。</p></section>'
   }
   function pickableMetrics() {
     var p = profile()
@@ -475,6 +498,7 @@
   function treatLog() {
     var p = profile()
     var rows = sharedOnly(p.treatments).sort(function (a, b) { return a.date < b.date ? 1 : -1 })
+    var addbar = '<div class="actions" style="margin-bottom:12px">' + addBtn('treat', '登记一笔治疗') + '</div>'
     var list = rows.length
       ? '<div class="table-wrap"><table><thead><tr><th>日期</th><th>类别</th><th>登记内容（照录）</th><th>备注</th></tr></thead><tbody>' +
         rows.map(function (t) { return '<tr><td>' + esc(fmtDate(t.date)) + '</td><td>' + esc(t.kind) + '</td><td>' + esc(t.name) + '</td><td>' + esc(t.note || '—') + '</td></tr>' }).join('') +
@@ -490,7 +514,7 @@
       '</div><p class="err-msg" id="treat-err" role="alert"></p>' +
       '<div class="actions"><button class="primary" data-action="save-treat-continue">保存并继续录入</button><button data-action="save-treat-close">保存并关闭</button><button data-action="cancel-form" data-form="treat">取消</button></div>' +
       '<p class="small-note">连续录入时不清屏，可一口气记完一次随访的多笔。</p></section>'
-    return list + form + '<p class="notice plain">' + esc(privacyLine(p.treatments) || '本页暂无私密标记说明。') + '</p>'
+    return addbar + list + form + '<p class="notice plain">' + esc(privacyLine(p.treatments) || '本页暂无私密标记说明。') + '</p>'
   }
   function medsList() {
     var p = profile()
@@ -509,6 +533,7 @@
   function visitsPrep() {
     var p = profile()
     var qs = p.questions
+    var addbar = '<div class="actions" style="margin-bottom:12px">' + addBtn('q', '添加复诊问题') + '</div>'
     var rows = qs.length ? '<div class="list">' + qs.map(function (q) {
       return '<div class="row-item"><span class="d">' + esc(fmtDate(q.addedOn)) + '</span><span class="txt">' + esc(q.q) + (q.private ? ' <span class="pill private">私密</span>' : '') + '<div class="small-note">' + (q.answered ? '已问过' : '待问') + ' · 由私密记录改写的问题同样算私密</div></span>' +
         '<button class="linkish" data-action="q-priv" data-id="' + q.id + '">' + (q.private ? '改为共享' : '改为私密') + '</button></div>'
@@ -517,10 +542,11 @@
       '<label class="full">想问的事<span class="req">*</span><input type="text" data-draft="q.q" value="' + esc((state.draft.q || {}).q || '') + '" maxlength="120"></label>' +
       '</div><div class="actions"><button class="primary" data-action="save-q-continue">保存并继续录入</button><button data-action="save-q-close">保存并关闭</button><button data-action="cancel-form" data-form="q">取消</button></div>' +
       '<button class="soft" style="margin-top:8px" data-action="ai" data-page="visits">让 AI 帮我起草候选问题（预览，需逐条核对）</button></section>'
-    return rows + form + '<p class="notice plain">' + esc(privacyLine(qs) || '写满一条后这里会显示私密说明。') + '</p>'
+    return addbar + rows + form + '<p class="notice plain">' + esc(privacyLine(qs) || '写满一条后这里会显示私密说明。') + '</p>'
   }
   function hospitalsPage() {
     var p = profile()
+    var addbar = '<div class="actions" style="margin-bottom:12px">' + addBtn('hosp', '添加一家医院') + '</div>'
     var cards = p.hospitals.map(function (h) {
       return '<section class="card"><div class="card-head"><h3>' + esc(h.name) + '</h3><span class="pill">版本 v' + h.ver + '</span></div><p>' + esc(h.dept) + '</p><p class="small-note">联系方式：' + esc(h.contact) + '</p><button class="soft" data-action="hospital-edit" data-id="' + h.id + '">修改（=新版本，不覆盖）</button></section>'
     }).join('')
@@ -529,7 +555,7 @@
       '<label>科室<input type="text" data-draft="hosp.dept" value="' + esc((state.draft.hosp || {}).dept || '') + '"></label>' +
       '<label class="full">联系方式（电话或「出处引用」）<input type="text" data-draft="hosp.contact" value="' + esc((state.draft.hosp || {}).contact || '') + '" maxlength="80"></label>' +
       '</div><div class="actions"><button class="primary" data-action="save-hosp">保存医院</button><button data-action="cancel-form" data-form="hosp">取消</button></div></section>'
-    return '<div class="grid two">' + cards + '</div>' + form
+    return addbar + '<div class="grid two">' + cards + '</div>' + form
   }
 
   /* ---------- 页面：报告与原件 ---------- */
@@ -540,11 +566,25 @@
   function reportsList() {
     var p = profile()
     var rows = sharedOnly(p.reports).sort(function (a, b) { return b.date < a.date ? -1 : 1 })
-    return '<div class="table-wrap"><table><thead><tr><th>日期</th><th>名称</th><th>类型</th><th>原件状态</th><th>备注</th><th>详情</th></tr></thead><tbody>' +
+    var addbar = '<div class="actions" style="margin-bottom:12px">' + addBtn('report', '登记一份报告') + '</div>'
+    return addbar + reportForm() + '<div class="table-wrap"><table><thead><tr><th>日期</th><th>名称</th><th>类型</th><th>原件状态</th><th>备注</th><th>详情</th></tr></thead><tbody>' +
       rows.map(function (r) { return '<tr><td>' + esc(fmtDate(r.date)) + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.kind) + '</td><td>' + esc(r.source) + '</td><td>' + esc(r.effusion || '—') + '</td><td><button class="linkish" data-action="pv-report" data-id="' + r.id + '">查看详情</button></td></tr>' }).join('') +
       '</tbody></table></div><p class="scroll-hint">← 左右滑动查看 →</p>' +
       '<p class="notice plain">' + esc(privacyLine(p.reports)) + '</p>' +
       '<p class="notice plain">同一份报告的历次修订用同一报告 ID 管理；本台不做任何判读。</p>'
+  }
+  /* 报告登记（F2）：名称/日期/类型/原件状态/关键描述 = 5 字段；三态保存 */
+  function reportForm() {
+    var d = state.draft.report || {}
+    return '<section class="card" id="form-report"><h3>登记一份报告</h3>' +
+      '<div class="form-grid">' +
+      '<label class="full">名称<span class="req">*</span><input type="text" data-draft="report.title" value="' + esc(d.title || '') + '" maxlength="60"></label>' +
+      '<label>日期<input type="date" data-draft="report.date" value="' + esc(d.date || '') + '"></label>' +
+      '<label>类型<select data-draft="report.kind">' + ['超声', '化验', '病历', '治疗', '其他'].map(function (k) { return '<option' + (d.kind === k ? ' selected' : '') + '>' + k + '</option>' }).join('') + '</select></label>' +
+      '<label>原件状态<select data-draft="report.source">' + ['原件已登记', '未取得原件', '仅题录'].map(function (k) { return '<option' + (d.source === k ? ' selected' : '') + '>' + k + '</option>' }).join('') + '</select></label>' +
+      '<label class="full">关键描述（照录，不做判读）<input type="text" data-draft="report.effusion" value="' + esc(d.effusion || '') + '" maxlength="80"></label>' +
+      '</div><div class="actions"><button class="primary" data-action="save-report-continue">保存并继续录入</button><button data-action="save-report-close">保存并关闭</button><button data-action="cancel-form" data-form="report">取消</button></div>' +
+      '<p class="small-note">私密报告不进看板摘要、导出与 AI 上下文。本原型演示录入，不真实持久化（刷新重置）。</p></section>'
   }
   function reportsWall() {
     var p = profile()
@@ -564,19 +604,39 @@
   function mindFeel() {
     var p = profile()
     var rows = sharedOnly(p.mind.feel)
+    var addbar = '<div class="actions" style="margin-bottom:12px">' + addBtn('feel', '写一条当下感受') + '</div>'
     var html = rows.length ? '<div class="list">' + rows.map(function (x, i) {
       return '<div class="row-item"><span class="d">' + esc(fmtDate(x.d)) + '</span><span class="txt">' + esc(x.text) + '<div class="small-note">' + esc(x.author) + '</div></span>' +
         '<button class="linkish" data-action="feel-priv" data-i="' + i + '">' + (x.private ? '改为共享' : '改为私密') + '</button></div>'
     }).join('') + '</div>' : '<div class="empty">还没有记录。<div class="actions" style="justify-content:center;margin-top:8px"><button data-action="show-form" data-form="feel">写一条当下感受 →</button></div></div>'
-    return html + '<p class="notice warn">' + esc(privacyLine(p.mind.feel) || '本页支持私密标记。') + '三处出口（看板摘要 / 导出 / AI 上下文）共用同一过滤。</p>'
+    return addbar + html + feelForm() + '<p class="notice warn">' + esc(privacyLine(p.mind.feel) || '本页支持私密标记。') + '三处出口（看板摘要 / 导出 / AI 上下文）共用同一过滤。</p>'
+  }
+  function feelForm() {
+    var d = state.draft.feel || {}
+    return '<section class="card" id="form-feel"><h3>写一条当下感受</h3>' +
+      '<div class="form-grid">' +
+      '<label>日期<input type="date" data-draft="feel.d" value="' + esc(d.d || TODAY) + '"></label>' +
+      '<label><span>私密</span><select data-draft="feel.private"><option value="">共享</option><option value="1">私密</option></select></label>' +
+      '<label class="full">感受（只记录，不做评分）<input type="text" data-draft="feel.text" value="' + esc(d.text || '') + '" maxlength="120"></label>' +
+      '</div><div class="actions"><button class="primary" data-action="save-feel-continue">保存并继续录入</button><button data-action="save-feel-close">保存并关闭</button><button data-action="cancel-form" data-form="feel">取消</button></div></section>'
   }
   function mindFamily() {
     var p = profile()
     var rows = sharedOnly(p.mind.family)
+    var addbar = '<div class="actions" style="margin-bottom:12px">' + addBtn('family', '记一条家人支持') + '</div>'
     var html = rows.length ? '<div class="list">' + rows.map(function (x) {
       return '<div class="row-item"><span class="d">' + esc(fmtDate(x.d)) + '</span><span class="txt">' + esc(x.text) + '<div class="small-note">' + esc(x.author) + '</div></span></div>'
     }).join('') + '</div>' : '<div class="empty">还没有家人记录。<div class="actions" style="justify-content:center;margin-top:8px"><button data-action="show-form" data-form="family">记一条 →</button></div></div>'
-    return html + '<p class="notice plain">照护者可以在「发作与缓解」里代记事实；本页只写感受与支持事项。</p>'
+    return addbar + html + familyForm() + '<p class="notice plain">照护者可以在「发作与缓解」里代记事实；本页只写感受与支持事项。</p>'
+  }
+  function familyForm() {
+    var d = state.draft.family || {}
+    return '<section class="card" id="form-family"><h3>记一条家人支持事项</h3>' +
+      '<div class="form-grid">' +
+      '<label>日期<input type="date" data-draft="family.d" value="' + esc(d.d || TODAY) + '"></label>' +
+      '<label>记录人<input type="text" data-draft="family.author" value="' + esc(d.author || '家属') + '" maxlength="12"></label>' +
+      '<label class="full">事项<input type="text" data-draft="family.text" value="' + esc(d.text || '') + '" maxlength="120"></label>' +
+      '</div><div class="actions"><button class="primary" data-action="save-family-continue">保存并继续录入</button><button data-action="save-family-close">保存并关闭</button><button data-action="cancel-form" data-form="family">取消</button></div></section>'
   }
 
   /* ---------- 页面：病情档案 ---------- */
@@ -681,39 +741,112 @@
   function pageClinical() {
     var cur = subOf('clinical')
     return head('临床', SUBTITLES.clinical, 'clinical') + subnav('clinical') +
-      (cur === 'status' ? clinicalStatus() : clinicalBrowse(''))
+      (cur === 'facts' ? clinicalFacts() : cur === 'search' ? clinicalSearch() : cur === 'match' ? clinicalMatch() : clinicalSaved())
   }
-  function clinicalStatus() {
-    var snap = window.DEMO_DATA.snapshotMeta || {}
-    return '<section class="card"><h3>快照状态</h3>' +
-      '<p>' + (snap.count ? '共 <b>' + snap.count + '</b> 条登记（合并同登记号后）· 快照日期 ' + esc(snap.date) : '本台未生成快照。') + '</p>' +
-      '<h3 style="margin-top:10px">来源通道终态（如实）</h3>' +
-      '<div class="table-wrap"><table><thead><tr><th>通道</th><th>终态</th><th>说明</th></tr></thead><tbody>' +
-      '<tr><td>ctv（ClinicalTrials.gov 本地索引）</td><td><span class="pill ok">SUCCESS</span></td><td>检索成功；零命中只代表本地索引未命中</td></tr>' +
-      '<tr><td>ictrp（WHO ICTRP）</td><td><span class="pill ok">SUCCESS</span></td><td>上游导出存在已知静默缺口</td></tr>' +
-      '<tr><td>chinadrugtrials</td><td><span class="pill ok">SUCCESS</span></td><td>中文关键词命中</td></tr>' +
-      '<tr><td>chictr_online</td><td><span class="pill warn">FAILED</span></td><td><b>未查过</b>——不能当作零结果；晨审重跑</td></tr>' +
-      '<tr><td>chictr_pancreatic_archive</td><td><span class="pill warn">NEEDS_SETUP</span></td><td>离线语料仅胰腺癌覆盖，本台无覆盖</td></tr>' +
+  /* ① 建档：只有已确认入库的字段参与匹配（35 号 E3①）；快照未结构化的字段如实写不能参与 */
+  function clinicalFacts() {
+    var p = profile()
+    var rows = [
+      ['诊断', (p.profile['确诊经过'] || '').slice(0, 40) + '…', '已确认入库', true],
+      ['治疗史', (p.meds || []).map(function (m) { return m.name }).join('、') || '未登记', (p.meds || []).length ? '已确认入库' : '待核对', !!(p.meds || []).length],
+      ['年龄', '未登记', '待核对', false],
+      ['性别', '未登记', '待核对', false]
+    ]
+    return '<section class="card"><h3>我的档案字段</h3>' +
+      '<div class="table-wrap"><table><thead><tr><th>字段</th><th>登记内容</th><th>状态</th></tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td style="white-space:normal">' + esc(r[1]) + '</td><td><span class="pill ' + (r[3] ? 'ok' : 'warn') + '">' + esc(r[2]) + '</span></td></tr>' }).join('') +
       '</tbody></table></div><p class="scroll-hint">← 左右滑动查看 →</p>' +
-      '<p class="notice plain">本页与「设置 · 临床数据库」tab 同一份数据口径（E10）。</p></section>'
+      '<p class="notice plain">只有「已确认入库」的字段参与匹配；未核对候选不参与。</p>' +
+      '<h3 style="margin-top:14px">本机快照能对照什么（如实）</h3>' +
+      '<p class="small-note">快照只存登记的结构化字段（题目/类型/来源/登记号）。能对照的目前只有 <b>疾病相关性</b> 与 <b>研究类型偏好</b> 两项；年龄、性别、化验值在登记页有，但本机快照未结构化——参与会造出假分数，等快照升级后开放【待核】。药物靶点即使有也<b>不进分母</b>：靶点是「药打哪里」，不等于你的条件。</p>' +
+      '<h3 style="margin-top:14px">匹配偏好（只影响排序与类型对照）</h3>' +
+      '<div class="chips" role="group" aria-label="研究类型偏好">' +
+      [['不限', 'all'], ['介入性', 'interventional'], ['观察性', 'observational']].map(function (x) {
+        return '<button aria-pressed="' + (state.trialPref === x[1]) + '" data-action="trial-pref" data-pref="' + x[1] + '">' + x[0] + '</button>'
+      }).join('') + '</div>' +
+      '<p class="small-note">偏好不是条件；选「不限」时类型不进可对照分母（可对照不足 2 条就不给符合度）。</p></section>'
+  }
+  /* ② 检索：按用户选的条件排，不掺分数 */
+  function clinicalSearch() {
+    return '<section class="card"><h3>检索快照</h3>' +
+      '<p class="small-note">按你选的条件排，<b>不做匹配打分，不预测入选机会</b>。登记状态一律「未核实」。</p>' +
+      '<div class="form-grid"><label>关键词（题目包含）<input type="search" id="trial-kw" placeholder="如 colchicine / 心包"></label>' +
+      '<label>类型<select id="trial-type"><option value="">全部</option><option>介入性</option><option>观察性</option></select></label></div>' +
+      '<div class="actions" style="margin:8px 0 12px"><button class="primary" data-action="trial-search">检索快照</button></div>' +
+      '<div id="trial-result">' + trialRows((window.DEMO_DATA.trialsDemo || []).slice(0, 5)) + '</div>' +
+      '<p class="notice plain">原型内置 5 条<b>虚构示例</b>（不是真实研究，不含可用登记号）；开发版从本机快照（97 条）检索，术语与状态以官方登记页为准。</p></section>'
   }
   function trialRows(rows) {
-    if (!rows.length) return '<div class="empty">没有命中的登记。换关键词，或回「数据库状态」看通道终态。</div>'
+    if (!rows.length) return '<div class="empty">没有命中的登记。换关键词，或回「建档」看可对照项。</div>'
     return '<div class="table-wrap"><table><thead><tr><th>登记号</th><th>题目</th><th>类型</th><th>状态</th><th>来源</th></tr></thead><tbody>' +
       rows.map(function (r) {
         var reg = (r.registryNumbers || []).map(function (x) { return x.value }).join(' / ') || r.recordId
         return '<tr><td>' + esc(reg) + '</td><td style="white-space:normal;min-width:220px">' + esc(r.title || '') + '</td><td>' + esc(r.studyType || '—') + '</td><td>' + esc(r.statusNote || '登记状态，未核实') + '</td><td>' + esc(r.source || '') + '</td></tr>'
       }).join('') + '</tbody></table></div><p class="scroll-hint">← 左右滑动查看 →</p>'
   }
-  function clinicalBrowse(keyword) {
+  /* ③ 匹配：分层 + 逐条证据链；百分数只在展示层算（35 号 E3③/E4/E7） */
+  function clinicalMatch() {
     var demo = window.DEMO_DATA.trialsDemo || []
-    return '<section class="card"><h3>登记浏览</h3>' +
-      '<p class="small-note">快照离线检索；按你选的条件排，<b>不做匹配打分，不预测入选机会</b>。登记状态一律「未核实」。</p>' +
-      '<div class="form-grid" style="grid-template-columns:1fr"><label>关键词（题目包含）<input type="search" id="trial-kw" value="' + esc(keyword || '') + '" placeholder="如 colchicine / 心包"></label></div>' +
-      '<div class="actions" style="margin:8px 0 12px"><button class="primary" data-action="trial-search">检索快照</button></div>' +
-      '<div id="trial-result">' + trialRows(demo) + '</div>' +
-      '<p class="notice plain">原型内置 5 条<b>虚构示例</b>（不是真实研究，不含可用登记号）；开发版从本机快照（97 条）检索，术语与状态以官方登记页为准。</p></section>'
+    var pool = demo
+    var poolNote = '候选池口径：本页演示内置 5 条<b>虚构示例</b>；开发版为本机快照 97 条中参与检索的条目——不是全库扫描。'
+    var cards = pool.map(function (r) { return matchCard(r) }).join('')
+    return '<section class="card"><h3>匹配结果</h3>' +
+      '<p class="notice plain">' + poolNote + ' 偏好：<b>' + esc(prefLabel()) + '</b>（可在「建档」改）。百分数只在展示层计算，不入库、不写任何判读列。</p>' +
+      '<div class="grid" id="match-cards">' + (cards || '<div class="empty">没有可匹配的候选。</div>') + '</div>' +
+      '<p class="notice plain">本机快照只存登记的结构化字段，<b>入排标准请到官方登记页核对</b>——这里的留白会被读成「已经判过了」。</p></section>' +
+      '<div id="trial-detail-root"></div>'
   }
+  function prefLabel() {
+    return { all: '研究类型不限', interventional: '偏好介入性', observational: '偏好观察性' }[state.trialPref] || '研究类型不限'
+  }
+  /* 纯函数匹配（window.PeriTrialMatch，lib 形态可被 node 测试断言） */
+  function matchCard(r) {
+    var M = window.PeriTrialMatch
+    var facts = { title: r.title || '', studyType: r.studyType || '' }
+    var items = M.items(facts, { type: state.trialPref })
+    var sc = M.score(items)
+    var reg = (r.registryNumbers || []).map(function (x) { return x.value }).join(' / ') || r.recordId
+    var hard = items.filter(function (i) { return i.hard && i.state === '✕' }).map(function (i) { return i.label })
+    var order = { '✕': 0, '?': 1, '✓': 2 }
+    var sorted = items.slice().sort(function (a, b) { return order[a.state] - order[b.state] })
+    var evidence = '<details class="pick"><summary>证据链（' + items.length + ' 条，不符合与待确认在前）</summary>' +
+      sorted.map(function (i) {
+        return '<div class="row-item"><span class="d">' + i.state + '</span><span class="txt"><b>' + esc(i.label) + '</b>' + (i.hard ? ' <span class="pill warn">硬性</span>' : '') +
+          '<div class="small-note">记录里是：' + esc(i.got) + ' · 条件要求：' + esc(i.req) + '</div></span></div>'
+      }).join('') +
+      '<p class="small-note">药物靶点不进分母：靶点是「药打哪里」，不等于你的检测条件。未结构化的条件写「需人工核对」，不冒充已判。</p></details>'
+    var scoreBox = sc.pct == null
+      ? '<div class="score-box off"><b>—</b><span>登记字段符合度 · ' + esc(sc.reason) + '</span></div>'
+      : '<div class="score-box"><b>' + sc.pct + '%</b><span>登记字段符合度</span></div>'
+    return '<section class="card match-card"><div class="match-head">' + scoreBox +
+      '<div class="match-main"><h3>' + esc(r.title || '') + '</h3>' +
+      '<p class="small-note">' + esc(reg) + ' · ' + esc(r.studyType || '类型未登记') + ' · ' + esc((r.registryNumbers || [])[0] ? (r.registryNumbers[0].registry + ' 来源') : '快照') + '</p>' +
+      '<p class="small-note"><b>' + (sc.pct == null ? '— ' : sc.ok + ' / ' + sc.m + ' 项对得上 · ') + items.filter(function (i) { return i.state === '?' }).length + ' 项待确认</b>' + (hard.length ? ' · 硬性不符：' + esc(hard.join('、')) : '') + '</p>' +
+      '</div><div class="match-side">' + (hard.length ? '<span class="pill warn">硬性不符</span>' : '<span class="pill ok">无硬性不符</span>') + '</div></div>' +
+      evidence +
+      '<div class="actions" style="margin-top:8px"><button class="soft" data-action="trial-save" data-id="' + esc(r.recordId) + '">收藏跟踪</button>' +
+      (r.sourceUrl ? '<a class="text-button" href="' + esc(r.sourceUrl) + '" target="_blank" rel="noopener">官方登记页 ↗</a>' : '') +
+      '<button class="text-button" data-action="trial-reject" data-id="' + esc(r.recordId) + '">拒收（零副作用）</button></div></section>'
+  }
+  /* ④ 收藏与跟踪：只存本机 {key, savedOn, state} */
+  function clinicalSaved() {
+    var saved = loadSaved()
+    return '<section class="card"><h3>我留的登记</h3>' +
+      (saved.length ? '<div class="table-wrap"><table><thead><tr><th>登记</th><th>收藏日期</th><th>阶段</th><th>操作</th></tr></thead><tbody>' +
+        saved.map(function (x) {
+          return '<tr><td style="white-space:normal">' + esc(x.title || x.key) + '</td><td>' + esc(x.savedOn) + '</td><td>' + esc(x.state) + '</td>' +
+            '<td><button class="linkish" data-action="trial-cycle" data-id="' + esc(x.key) + '">下一阶段</button> <button class="linkish" data-action="trial-unsave" data-id="' + esc(x.key) + '">移出</button></td></tr>'
+        }).join('') + '</tbody></table></div><p class="scroll-hint">← 左右滑动查看 →</p>'
+        : '<div class="empty">还没有收藏的登记。<div class="actions" style="justify-content:center;margin-top:8px"><button data-action="go" data-page="clinical">去「匹配」里挑 →</button></div></div>') +
+      '<p class="notice plain">收藏只存本机（localStorage）；快照没有登记状态变化时间线，<b>这里不画进度条</b>。阶段流转由你自己推进。</p></section>'
+  }
+  function loadSaved() {
+    try { return JSON.parse(global.localStorage.getItem('peri-trial-saved-' + state.profileId) || '[]') } catch (e) { return [] }
+  }
+  function saveSaved(list) {
+    try { global.localStorage.setItem('peri-trial-saved-' + state.profileId, JSON.stringify(list)) } catch (e) { }
+  }
+
   /* ---------- 导航与渲染 ---------- */
   function navIcons(key) {
     var icons = {
@@ -949,6 +1082,8 @@
       var code = btn.getAttribute('data-code')
       state.flipped[code] = !state.flipped[code]
       btn.setAttribute('aria-pressed', String(state.flipped[code]))
+      /* 双通道：宿主环境若属性选择器失效，class 兜底（晨审真机反馈「反转无」） */
+      btn.classList.toggle('flipped', !!state.flipped[code])
     }
     else if (act === 'font') {
       document.body.classList.toggle('large')
@@ -957,6 +1092,26 @@
     else if (act === 'settings') { settingsModal('workspace') }
     else if (act === 'settings-tab') { settingsModal(btn.getAttribute('data-tab')) }
     else if (act === 'trial-search') { doTrialSearch() }
+    else if (act === 'trial-pref') { state.trialPref = btn.getAttribute('data-pref'); render() }
+    else if (act === 'trial-save') {
+      var id = btn.getAttribute('data-id')
+      var rec = (window.DEMO_DATA.trialsDemo || []).find(function (r) { return r.recordId === id })
+      var list = loadSaved()
+      if (!list.some(function (x) { return x.key === id })) {
+        list.push({ key: id, title: rec ? rec.title : id, savedOn: TODAY, state: '在跟' })
+        saveSaved(list); toast('已收藏（只存本机）；拒收零副作用')
+      } else toast('已在收藏里')
+    }
+    else if (act === 'trial-reject') { toast('已拒收：候选线索只做参考，拒收零副作用，不入档') }
+    else if (act === 'trial-cycle') {
+      var list2 = loadSaved(); var it = list2.find(function (x) { return x.key === btn.getAttribute('data-id') })
+      var seq = ['在跟', '准备问', '已归档']
+      it.state = seq[(seq.indexOf(it.state) + 1) % seq.length]
+      saveSaved(list2); render()
+    }
+    else if (act === 'trial-unsave') {
+      saveSaved(loadSaved().filter(function (x) { return x.key !== btn.getAttribute('data-id') })); render()
+    }
     else if (act === 'open-store') { openDialog('资料目录', '<p>开发版中选择本机目录；口径：拒绝主目录、桌面、下载根目录、tmp。</p><p>本原型为示意，目录未真实挂载。</p>') }
     else if (act === 'about') { openDialog('原型操作说明', '<p>全部数据为合成示例（两套档案，侧栏可切换）。</p><p>顶部「?」打开整页疾病概要；每页「和 AI 讨论」只填草稿不发送。</p><p>私密记录不进看板摘要、导出与 AI 上下文。</p>') }
     else if (act === 'dialog-close') { $('#dialog').close() }
@@ -984,6 +1139,10 @@
     else if (act === 'save-treat-continue' || act === 'save-treat-close') { saveTreat(act === 'save-treat-continue') }
     else if (act === 'save-q-continue' || act === 'save-q-close') { saveQ(act === 'save-q-continue') }
     else if (act === 'save-hosp') { saveHosp() }
+    else if (act === 'save-lab-continue' || act === 'save-lab-close') { saveLab(act === 'save-lab-continue') }
+    else if (act === 'save-report-continue' || act === 'save-report-close') { saveReport(act === 'save-report-close') }
+    else if (act === 'save-feel-continue' || act === 'save-feel-close') { saveFeel(act === 'save-feel-close') }
+    else if (act === 'save-family-continue' || act === 'save-family-close') { saveFamily(act === 'save-family-close') }
     else if (act === 'hospital-edit') { toast('更正=新增版本（本原型演示入口；开发版打开表单并保留历史版本）') }
     else if (act === 'flap-priv') {
       var f = p.flaps.find(function (z) { return z.id === btn.getAttribute('data-id') })
@@ -1065,6 +1224,34 @@
     if (!d.q) { toast('问题内容为必填'); return }
     profile().questions.push({ id: 'new-' + Date.now(), q: d.q, addedOn: TODAY, answered: false, private: false })
     if (!keep) delete state.draft.q
+    render(); toast(keep ? '已保存（演示）；继续录入' : '已保存并关闭（演示）')
+  }
+  function saveLab(keep) {
+    var d = state.draft.lab || {}
+    if (!d.date || !d.value) { toast('日期与结果为必填'); return }
+    profile().labs.push({ id: 'new-' + Date.now(), metric: d.metric || 'CRP', date: d.date, value: Number(d.value) || d.value, unit: d.unit || '', method: d.method || '', org: d.org || '', private: false })
+    if (!keep) delete state.draft.lab
+    render(); toast(keep ? '已保存 1 条（演示）；可继续录入' : '已保存并关闭（演示）')
+  }
+  function saveReport(keep) {
+    var d = state.draft.report || {}
+    if (!d.title) { toast('报告名称为必填'); return }
+    profile().reports.push({ id: 'new-' + Date.now(), title: d.title, date: d.date || null, kind: d.kind || '其他', source: d.source || '未取得原件', effusion: d.effusion || '', private: false })
+    if (!keep) delete state.draft.report
+    render(); toast(keep ? '已保存（演示）；继续录入' : '已保存并关闭（演示）')
+  }
+  function saveFeel(keep) {
+    var d = state.draft.feel || {}
+    if (!d.text) { toast('感受内容为必填'); return }
+    profile().mind.feel.push({ d: d.d || TODAY, text: d.text, author: '本人', private: !!d.private })
+    if (!keep) delete state.draft.feel
+    render(); toast(keep ? '已保存（演示）；继续录入' : '已保存并关闭（演示）')
+  }
+  function saveFamily(keep) {
+    var d = state.draft.family || {}
+    if (!d.text) { toast('事项为必填'); return }
+    profile().mind.family.push({ d: d.d || TODAY, text: d.text, author: d.author || '家属', private: false })
+    if (!keep) delete state.draft.family
     render(); toast(keep ? '已保存（演示）；继续录入' : '已保存并关闭（演示）')
   }
   function saveHosp() {
@@ -1176,8 +1363,10 @@ const ROUTES = {
   'records/archive': pageRecords,
   'records/metrics': pageRecords,
   'records/summary': pageRecords,
-  'clinical/status': pageClinical,
-  'clinical/browse': pageClinical
+  'clinical/facts': pageClinical,
+  'clinical/search': pageClinical,
+  'clinical/match': pageClinical,
+  'clinical/saved': pageClinical
 };
 
 
