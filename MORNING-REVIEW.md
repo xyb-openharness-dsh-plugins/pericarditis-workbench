@@ -42,3 +42,16 @@
 - 真实数据 / 原生 AI / MinerU：未接入，界面与文档如实标注
 - 网络：github.com 夜间抖动（clone 第 4 次成功）；chictr_online 通道 FAILED（如实记为未查过，未冒充零结果）
 - 遗留风险：probe-page-view.mjs 对 starter examples 默认页在改动前即失配（与本仓无关，已用 git show HEAD 验证）；装机相对路径 tgz 首次 ENOENT（改绝对路径，教训见 V2V3 签认）
+
+
+## 晨审反馈修复轮（2026-11-07，0.1.1）
+
+用户实测四条 → 全部修复并复测：
+1. 设置无法打开 → 改乳腺癌式弹层三 tab（顶栏「设置」直接开），probe CFG1 通过
+2. 缺临床功能 → 恢复「临床」一级菜单（状态+浏览），probe CLIN1 通过；DEV-PLAN 裁剪决定修订
+3. 指标卡没了 → 看板补「关键指标（最近值）」卡组，probe TILE1 通过；指标检测页 8 卡 5 组，probe MC1 通过
+4. 指标太少 → 扩为 8 项 5 组（炎症/血象/心肌标志物/用药安全监测/体征），demo 数据 A 基线+B 多次
+
+附带重构：dsh/demo.js 改为直读 demo-data.js（演示真唯一源）；指标元数据下沉数据文件。
+复测：check 0 / test 34/34 / audit 44/44 / 探针 31/31·10/10·13/13。
+装机：0.1.1 tgz 重装 Desktop profile，重启后 verify exit 0（v0.1.1，bundles 63）。

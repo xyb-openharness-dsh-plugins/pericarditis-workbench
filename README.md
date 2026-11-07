@@ -55,7 +55,15 @@
 ![整页视图](docs/screenshots/v0.2-09-page-view.png)
 返回/关闭双入口、Esc 一层一退、history 为导航栈唯一真源；导出预览与看板摘要、AI 上下文共用同一私密过滤函数。
 
-### 8. 其余实渲截图
+### 8. 设置弹层 / 临床页 / 指标分组（0.1.1 晨审修复）
+![设置弹层](docs/screenshots/v0.2-12-settings-dialog.png)
+设置=顶栏弹层三 tab（工作区/文档解析 MinerU/临床数据库），乳腺癌同款交互。
+![指标分组](docs/screenshots/v0.2-13-metric-groups-B.png)
+指标体系 8 项 5 组：炎症（CRP/ESR）、血象（WBC）、心肌标志物（cTnI/NT-proBNP）、用药安全监测（ALT/Cr）、体征（体温）。
+![临床浏览](docs/screenshots/v0.2-14-clinical-browse.png)
+「临床」一级菜单：数据库状态（通道终态如实，FAILED 不冒充零结果）+ 登记浏览（快照 97 条；无匹配打分，登记状态未核实）。
+
+### 9. 其余实渲截图
 - [AI 演示面板](docs/screenshots/v0.2-02-agent-pane.png)（右侧 35% 可拖 25–45%，未接通明说）
 - [设置 · 文档解析 MinerU](docs/screenshots/v0.2-10-settings-mineru.png)（未勾选不上传；本仓未接入如实标注）
 - [窄宽 390](docs/screenshots/v0.2-11-narrow-390.png)（无横向溢出）
@@ -83,4 +91,4 @@ node scripts/probe-pericarditis-m2.mjs        # M2 真实浏览器探针（IP/C/
 node scripts/probe-disease-primer.mjs --url http://127.0.0.1:8127/prototypes/v0.2/index.html
 node scripts/probe-page-view.mjs --url http://127.0.0.1:8127/prototypes/v0.2/index.html
 ```
-版本 v0.2.0（原型）；文档九件见 docs/；各闸口签认见 docs/signoffs/。
+版本 0.1.1（包）/ 原型 v0.2；文档九件见 docs/；各闸口签认见 docs/signoffs/。

@@ -14,9 +14,10 @@
 | visits | prep / hospitals | 复诊准备（问题清单） / 就医信息多医院卡片 | P5 |
 | reports | list / wall | 报告登记与最近报告表 / 原件截图墙 | P6 |
 | mind | notes / family | 担忧与生活影响笔记 / 家人支持事项 | P7 |
-| records | archive | 档案总览（确诊档案、随访节律、资料导入状态） | P8 |
-| settings | workspace / mineru / clinical | 三 tab 设置（工作区 / 文档解析 MinerU / 临床数据库） | P9 |
-| primer | — | 疾病概要整页浮层（顶栏「?」与首页疾病介绍入口两个入口） | P10 |
+| records | archive / metrics / summary | 档案总览 / 指标检测（8 指标 5 组 3D 卡） / 病情汇总 | P8 |
+| clinical | status / browse | 数据库状态（通道终态如实） / 登记浏览（快照 97 条，无匹配打分） | P9 |
+| 设置（弹层） | workspace / mineru / clinic | 顶栏「设置」打开弹层三 tab（乳腺癌 CFG_TABS 式），不在一级导航 | P10 |
+| primer | — | 疾病概要整页浮层（顶栏「?」与首页疾病介绍入口两个入口） | P11 |
 
 孤儿页 = 0 断言：每个 (view,sub) 至少被一条路径经过，M2 出穷举计数。
 

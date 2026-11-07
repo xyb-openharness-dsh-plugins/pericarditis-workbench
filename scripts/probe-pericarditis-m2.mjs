@@ -19,7 +19,7 @@ const PORT = Number(argOf('--port') || 8137)
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' }
 
 /* 全量叶子路由（与 app.js 顶层 ROUTES 一一对应；漏一条 check-probe-coverage 就会红） */
-const LEAF_ROUTES = ['dash', 'events/list', 'events/timeline', 'labs/list', 'labs/chart', 'treatment/log', 'treatment/meds', 'visits/prep', 'visits/hospitals', 'reports/list', 'reports/wall', 'mind/feel', 'mind/family', 'records/archive', 'records/metrics', 'records/summary', 'settings/workspace', 'settings/mineru', 'settings/clinical']
+const LEAF_ROUTES = ['dash', 'events/list', 'events/timeline', 'labs/list', 'labs/chart', 'treatment/log', 'treatment/meds', 'visits/prep', 'visits/hospitals', 'reports/list', 'reports/wall', 'mind/feel', 'mind/family', 'records/archive', 'records/metrics', 'records/summary', 'clinical/status', 'clinical/browse']
 
 function findChrome() {
   if (process.env.CHROME_PATH && existsSync(process.env.CHROME_PATH)) return process.env.CHROME_PATH
@@ -90,7 +90,7 @@ async function main() {
     app.state.page = 'dash'; app.render()
     return { covered: covered.length, total: routes.length, orphans }
   }, LEAF_ROUTES)
-  t('IP2', '19 条叶子路由全部渲染非空（孤儿页=0，先证有内容）', walk.covered === walk.total && walk.orphans.length === 0, { covered: walk.covered, total: walk.total, orphans: walk.orphans })
+  t('IP2', '18 条叶子路由全部渲染非空（孤儿页=0，先证有内容）', walk.covered === walk.total && walk.orphans.length === 0, { covered: walk.covered, total: walk.total, orphans: walk.orphans })
 
   /* ---------- X2：深链接直达 ---------- */
   await page.evaluate(() => { location.hash = '#records/metrics' })
@@ -285,6 +285,26 @@ async function main() {
   t('Q14', '页面「和 AI 讨论」打开演示面板并填入草稿', draft.paneVisible && draft.text.includes('和 AI 讨论本页'), { ok: draft.paneVisible })
   t('Q17', '草稿只填不发（发送键 disabled、无 postMessage）', draft.sendDisabled && draft.msgs.length === 0, draft.msgs)
   t('Q19', '携带上下文不含判定词', !/诊断|分级|预后|建议|风险/.test(draft.text), { text: draft.text.slice(0, 60) })
+
+  /* ---------- 晨审修复回归：设置弹层 / 临床浏览 / 看板指标卡 / 指标体系 ---------- */
+  await page.evaluate(() => { window.__PERI_APP__.state.page = 'dash'; window.__PERI_APP__.render() })
+  await page.click('[data-action="settings"]')
+  const cfg = await page.evaluate(() => ({
+    open: document.querySelector('#dialog').open,
+    tabs: [...document.querySelectorAll('[data-action="settings-tab"]')].map(b => b.textContent.trim()),
+    hasConsent: document.querySelector('#mineru-consent') ? false : document.querySelector('#dialog').innerText.includes('MinerU')
+  }))
+  await page.evaluate(() => document.querySelector('[data-action="dialog-close"]').click())
+  t('CFG1', '设置弹层打开且三 tab（工作区/MinerU/临床数据库）', cfg.open && cfg.tabs.join('|') === '工作区|文档解析（MinerU）|临床数据库', cfg)
+  await page.evaluate(() => { const a = window.__PERI_APP__; a.state.page = 'clinical'; a.state.sub.clinical = 'browse'; a.render() })
+  const clin = await page.evaluate(() => ({ rows: document.querySelectorAll('#trial-result tbody tr').length, noIndex: !document.querySelector('#main').innerText.includes('匹配指数'), demo: document.querySelector('#main').innerText.includes('虚构示例') }))
+  t('CLIN1', '临床登记浏览有内容且无匹配指数（虚构示例明示）', clin.rows >= 5 && clin.noIndex && clin.demo, clin)
+  await page.evaluate(() => { const a = window.__PERI_APP__; a.state.page = 'dash'; a.render() })
+  const tiles = await page.evaluate(() => ({ tiles: document.querySelectorAll('.stat-tile').length, groups: window.__PERI_APP__ ? ['CRP','ESR','WBC','cTnI','NT-proBNP','ALT','Cr','体温'].length : 0 }))
+  t('TILE1', '看板关键指标最近值卡 ≥5 张（指标体系扩充）', tiles.tiles >= 5, tiles)
+  await page.evaluate(() => { const a = window.__PERI_APP__; a.state.page = 'records'; a.state.sub.records = 'metrics'; a.render() })
+  const mcards = await page.evaluate(() => ({ n: document.querySelectorAll('.mcard').length, groups: document.querySelectorAll('.metric-group').length }))
+  t('MC1', '指标检测页指标卡 ≥7 张、分组 ≥4（8 指标 5 组，按有数据渲染）', mcards.n >= 7 && mcards.groups >= 4, mcards)
 
   /* ---------- Q26：390 宽无横向溢出（CDP） ---------- */
   const client = await page.target().createCDPSession()

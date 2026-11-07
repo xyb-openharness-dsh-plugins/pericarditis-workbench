@@ -61,11 +61,12 @@ const BOOT_BLOCK = `
       app.state.page = 'dash'
       app.state.sub = {}
       app.state.range = 'all'
-      app.state.picked = { CRP: true, ESR: true, '体温': false }
+      app.state.picked = { CRP: true, ESR: true, WBC: false, cTnI: false, 'NT-proBNP': false, ALT: false, Cr: false, '体温': false }
       app.state.showEpisodes = true
       app.state.flipped = {}
       app.render()
     }
+    window.__PERI_API_BASE__ = apiBase
     console.info('[pericarditis] 已切换到本机数据库数据（' + b.profiles.length + ' 个档案）')
   }).catch(function (e) {
     console.warn('[pericarditis] bootstrap 不可用，继续使用演示数据：', String(e && e.message || e))

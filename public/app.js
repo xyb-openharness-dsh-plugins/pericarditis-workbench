@@ -20,7 +20,7 @@
     ['reports', '报告与原件', 'file'],
     ['mind', '心理与家庭', 'heart'],
     ['records', '病情档案', 'folder'],
-    ['settings', '设置', 'gear']
+    ['clinical', '临床', 'micro']
   ]
   var SUBPAGES = {
     events: [['list', '发作记录'], ['timeline', '时间线区间带']],
@@ -30,7 +30,7 @@
     reports: [['list', '最近报告'], ['wall', '原件墙']],
     mind: [['feel', '当下感受'], ['family', '家庭与照护']],
     records: [['archive', '病情档案'], ['metrics', '指标检测'], ['summary', '病情汇总']],
-    settings: [['workspace', '工作区'], ['mineru', '文档解析（MinerU）'], ['clinical', '临床数据库']]
+    clinical: [['status', '数据库状态'], ['browse', '登记浏览']]
   }
   var SUBTITLES = {
     dash: '状态与最近变化都由你记录的事实算出；本台只回顾，不解读。',
@@ -41,11 +41,20 @@
     reports: '报告与原件的登记处；私密报告不进导出与 AI 上下文。',
     mind: '只记录感受与家人支持事项，不做情绪评分。',
     records: '档案总览；派生数字（如缓解天数）读时计算，不落任何判定。',
-    settings: '资料目录、文档解析与临床数据库状态。'
+    clinical: '临床试验与登记快照的离线检索；登记状态一律未核实，不做匹配打分。'
   }
-  var METRIC_COLORS = { CRP: '#2f6f8f', ESR: '#c96f2f', '体温': '#6b5b95' }
-  var METRIC_ORDER = ['CRP', 'ESR', '体温']
-  var METRIC_TITLES = { CRP: 'C 反应蛋白（CRP）', ESR: '红细胞沉降率（ESR）', '体温': '体温' }
+  /* 设置（乳腺癌式弹层）：三 tab，顶栏「设置」打开 */
+  var CFG_TABS = [['workspace', '工作区'], ['mineru', '文档解析（MinerU）'], ['clinic', '临床数据库']]
+  /* 指标元数据唯一源 = demo-data.js 的 metricDefs/metricGroups；无数据文件时给最小兜底 */
+  var METRIC_DEFS = DATA.metricDefs || [
+    { key: 'CRP', title: 'CRP', category: 'inflammation', color: '#2f6f8f', ord: 0 },
+    { key: 'ESR', title: 'ESR', category: 'inflammation', color: '#c96f2f', ord: 1 },
+    { key: '体温', title: '体温', category: 'vitals', color: '#6b5b95', ord: 2 }
+  ]
+  var METRIC_ORDER = METRIC_DEFS.map(function (d) { return d.key })
+  var METRIC_COLORS = {}, METRIC_TITLES = {}
+  METRIC_DEFS.forEach(function (d) { METRIC_COLORS[d.key] = d.color; METRIC_TITLES[d.key] = d.title })
+  var METRIC_GROUPS = DATA.metricGroups || [{ key: 'inflammation', title: '炎症指标', items: METRIC_ORDER.slice(0, 2) }]
   var RANGE_DEFS = [
     ['all', '全部'], ['1m', '近 1 月'], ['3m', '近 3 月'], ['6m', '近 6 月'], ['12m', '近 12 月']
   ]
@@ -57,7 +66,7 @@
     page: 'dash',
     sub: {},
     range: 'all',
-    picked: { CRP: true, ESR: true, '体温': false },
+    picked: (function () { var o = {}; (DATA.metricDefs || []).forEach(function (d) { o[d.key] = (d.key === 'CRP' || d.key === 'ESR') }); return o })(),
     showEpisodes: true,
     flipped: {},
     agentOpen: false,
@@ -162,6 +171,7 @@
     else if (page === 'reports') fact = '报告 ' + sharedOnly(p.reports).length + ' 份'
     else if (page === 'mind') fact = '感受记录 ' + sharedOnly(p.mind.feel).length + ' 条、家人记录 ' + sharedOnly(p.mind.family).length + ' 条'
     else if (page === 'records') fact = '档案字段 ' + Object.keys(p.profile).length + ' 项'
+    else if (page === 'clinical') fact = '试验快照 97 条（登记状态未核实，不做匹配打分）'
     else if (page === 'dash') fact = '状态：' + (derivedStatus().mode)
     return '和 AI 讨论本页（' + esc(profile().name) + ' · ' + fact + '）：帮我梳理这一页上我能核对的事实，以及我还没问医生的问题。只整理事实，判断交给医生。'
   }
@@ -225,11 +235,26 @@
       '</ul></section>'
     return head('看板', SUBTITLES.records, 'dash') + prime + actionStrip + quick +
       '<div class="dashboard-grid"><div>' + section('最近的变化', '由已记录的发作与化验算出') + recent + caliber + '</div>' +
-      '<div>' + mini + tasksList() + '</div></div>'
+      '<div>' + mini + dashMetricTiles() + tasksList() + '</div></div>'
   }
   function activeEnd() {
     var ends = profile().flaps.map(function (f) { return f.end }).filter(Boolean).sort()
     return ends[ends.length - 1]
+  }
+  /* 看板最近值指标卡（用户晨审补：每个有记录的指标一张，点去指标检测看 3D 卡与走势） */
+  function dashMetricTiles() {
+    var labs = sharedOnly(profile().labs)
+    if (!labs.length) return ''
+    var tiles = METRIC_ORDER.map(function (m) {
+      var rows = labs.filter(function (l) { return l.metric === m }).sort(function (a, b) { return a.date < b.date ? -1 : 1 })
+      if (!rows.length) return ''
+      var last = rows[rows.length - 1]
+      return '<section class="card stat-tile"><h3>' + esc(METRIC_TITLES[m]) + '</h3><p class="tile-val"><b>' + esc(last.value) + '</b> <span>' + esc(last.unit) + '</span></p>' +
+        '<p class="small-note">' + esc(fmtDate(last.date)) + ' · ' + esc(last.org) + ' · 共 ' + rows.length + ' 条</p>' +
+        '<button class="linkish" data-action="go" data-page="records">去指标检测 →</button></section>'
+    }).join('')
+    return section('关键指标（最近值）', '只列最近一次记录；不同方法/机构不合并；解读归医生') +
+      '<div class="grid three">' + tiles + '</div>'
   }
   function taskEntry(icon, title, desc, page) {
     return '<button class="task-entry" data-action="go" data-page="' + page + '"><span class="entry-icon" aria-hidden="true">' + icon + '</span><span><b>' + esc(title) + '</b><span>' + esc(desc) + '</span></span><span class="arrow" aria-hidden="true">→</span></button>'
@@ -327,13 +352,17 @@
   function labsList() {
     var p = profile()
     var labs = sharedOnly(p.labs)
-    var groups = METRIC_ORDER.map(function (m) {
-      var rows = labs.filter(function (l) { return l.metric === m }).sort(function (a, b) { return a.date < b.date ? 1 : -1 })
-      if (!rows.length) return ''
-      return section(METRIC_TITLES[m], '不同方法/机构不合并；解读归医生') +
-        '<div class="table-wrap"><table><thead><tr><th>日期</th><th>结果</th><th>方法</th><th>机构</th></tr></thead><tbody>' +
-        rows.map(function (l) { return '<tr><td>' + esc(fmtDate(l.date)) + '</td><td><b>' + esc(l.value) + '</b> ' + esc(l.unit) + '</td><td>' + esc(l.method) + '</td><td>' + esc(l.org) + '</td></tr>' }).join('') +
-        '</tbody></table></div><p class="scroll-hint">← 左右滑动查看 →</p>'
+    var groups = METRIC_GROUPS.map(function (g) {
+      var items = g.items.filter(function (m) { return labs.some(function (l) { return l.metric === m }) })
+      if (!items.length) return ''
+      var tables = items.map(function (m) {
+        var rows = labs.filter(function (l) { return l.metric === m }).sort(function (a, b) { return a.date < b.date ? 1 : -1 })
+        return '<h3 style="margin:12px 0 6px">' + esc(METRIC_TITLES[m]) + '</h3>' +
+          '<div class="table-wrap"><table><thead><tr><th>日期</th><th>结果</th><th>方法</th><th>机构</th></tr></thead><tbody>' +
+          rows.map(function (l) { return '<tr><td>' + esc(fmtDate(l.date)) + '</td><td><b>' + esc(l.value) + '</b> ' + esc(l.unit) + '</td><td>' + esc(l.method) + '</td><td>' + esc(l.org) + '</td></tr>' }).join('') +
+          '</tbody></table></div>'
+      }).join('')
+      return section(g.title, '不同方法/机构不合并；解读归医生') + tables
     }).join('')
     return (groups || '<div class="empty">还没有化验记录。<div class="actions" style="justify-content:center;margin-top:8px"><button data-action="go" data-page="reports">先去登记报告 →</button></div></div>') +
       '<p class="notice plain">' + esc(privacyLine(p.labs) || '本页暂无私密标记说明。') + '</p>'
@@ -347,10 +376,14 @@
       '<div class="card"><b>时间范围</b><div class="chips" role="group" aria-label="时间范围">' + RANGE_DEFS.map(function (r) {
         return '<button aria-pressed="' + (state.range === r[0]) + '" data-action="range" data-range="' + r[0] + '">' + r[1] + '</button>'
       }).join('') + '</div></div>' +
-      '<div class="card"><b>选择指标</b><details class="pick" open>' + '<summary>按指标分组（最多 4 条）</summary>' + pickableMetrics().map(function (m) {
-        var last = sharedOnly(profile().labs).filter(function (l) { return l.metric === m }).sort(function (a, b) { return a.date < b.date ? 1 : -1 })[0]
-        return '<label><input type="checkbox" data-action="metric" data-metric="' + m + '"' + (state.picked[m] ? ' checked' : '') + '><span class="dot" style="background:' + METRIC_COLORS[m] + '"></span>' + esc(m) + '<span class="last-val">最近 ' + esc(last ? last.value + ' ' + last.unit : '—') + '</span></label>'
-      }).join('') + '</details><p class="small-note">每条线按该指标全期范围归一化，两条线高低不代表可比——「不可比」。</p></div>' +
+      '<div class="card"><b>选择指标</b>' + '<p class="small-note" style="margin:2px 0 6px">按指标分组（同时最多 4 条）</p>' + METRIC_GROUPS.map(function (g) {
+        var items = g.items.filter(function (m) { return pickableMetrics().indexOf(m) >= 0 })
+        if (!items.length) return ''
+        return '<details class="pick" open><summary>' + esc(g.title) + '</summary>' + items.map(function (m) {
+          var last = sharedOnly(profile().labs).filter(function (l) { return l.metric === m }).sort(function (a, b) { return a.date < b.date ? 1 : -1 })[0]
+          return '<label><input type="checkbox" data-action="metric" data-metric="' + m + '"' + (state.picked[m] ? ' checked' : '') + '><span class="dot" style="background:' + METRIC_COLORS[m] + '"></span>' + esc(m) + '<span class="last-val">最近 ' + esc(last ? last.value + ' ' + last.unit : '—') + '</span></label>'
+        }).join('') + '</details>'
+      }).join('') + '<p class="small-note">每条线按该指标全期范围归一化，两条线高低不代表可比——「不可比」。</p></div>' +
       '<div class="card"><b>显示内容</b><div class="chips">' +
       '<button aria-pressed="' + state.showEpisodes + '" data-action="episodes">发作区间</button></div>' +
       '<p class="small-note">关闭发作区间不会改动数据线。</p></div>' +
@@ -563,29 +596,32 @@
   function recordsMetrics() {
     var p = profile()
     var labs = sharedOnly(p.labs)
-    var groups = METRIC_ORDER.map(function (m) {
-      var rows = labs.filter(function (l) { return l.metric === m }).sort(function (a, b) { return a.date < b.date ? -1 : 1 })
-      if (!rows.length) return ''
-      var last = rows[rows.length - 1]
-      var prev = rows.length > 1 ? rows[rows.length - 2] : null
-      var delta = prev ? '较上次 ' + (last.value - prev.value >= 0 ? '+' : '') + (last.value - prev.value) + ' ' + last.unit + '（' + esc(prev.date) + ' → ' + esc(last.date) + '）' : '仅 1 条记录'
-      var back = '<svg viewBox="0 0 200 60" role="img" aria-label="' + esc(m) + ' 近期走势缩略图">' +
-        rows.slice(-20).map(function (l, i, arr) {
-          var vals = arr.map(function (z) { return z.value }); var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals)
-          var x = 6 + i * (188 / Math.max(1, arr.length - 1))
-          var y = 52 - (mx === mn ? 24 : (l.value - mn) / (mx - mn) * 44)
-          return (i ? '<line x1="' + (6 + (i - 1) * (188 / Math.max(1, arr.length - 1))) + '" y1="' + y + '" x2="' + x + '" y2="' + y + '" stroke="' + METRIC_COLORS[m] + '" stroke-width="2"/>' : '') + '<circle cx="' + x + '" cy="' + y + '" r="2.4" fill="' + METRIC_COLORS[m] + '"/>'
-        }).join('') + '</svg><div class="src">' + esc(rows[0].date) + ' ～ ' + esc(last.date) + ' · 共 ' + rows.length + ' 条 · 不同方法不合并</div>'
-      return '<div class="metric-group"><div class="metric-group-head"><h3>' + esc(METRIC_TITLES[m]) + '</h3><span>' + rows.length + ' 项</span></div><div class="metric-grid">' +
-        '<button class="mcard" data-action="flip" data-code="' + m + '" aria-pressed="' + !!state.flipped[m] + '" aria-label="' + esc(m) + ' 指标卡，按回车翻面看走势">' +
-        '<span class="mcard-inner"><span class="mface front"><span class="cat">' + esc(METRIC_TITLES[m]) + '</span>' +
-        '<span class="mval"><b>' + esc(last.value) + '</b> <i>' + esc(last.unit) + '</i></span>' +
-        '<span class="delta">' + delta + '</span><span class="rec">共 ' + rows.length + ' 次记录</span>' +
-        '<span class="src">' + esc(fmtDate(last.date)) + ' · ' + esc(last.org) + ' · ' + esc(last.method) + ' · 翻面↗</span></span>' +
-        '<span class="mface back">' + back + '</span></span></button></div></div>'
+    var groups = METRIC_GROUPS.map(function (g) {
+      var items = g.items.filter(function (m) { return labs.some(function (l) { return l.metric === m }) })
+      if (!items.length) return ''
+      var cards = items.map(function (m) {
+        var rows = labs.filter(function (l) { return l.metric === m }).sort(function (a, b) { return a.date < b.date ? -1 : 1 })
+        var last = rows[rows.length - 1]
+        var prev = rows.length > 1 ? rows[rows.length - 2] : null
+        var delta = prev ? '较上次 ' + (last.value - prev.value >= 0 ? '+' : '') + (last.value - prev.value) + ' ' + last.unit + '（' + esc(prev.date) + ' → ' + esc(last.date) + '）' : '仅 1 条记录'
+        var back = '<svg viewBox="0 0 200 60" role="img" aria-label="' + esc(m) + ' 近期走势缩略图">' +
+          rows.slice(-20).map(function (l, i, arr) {
+            var vals = arr.map(function (z) { return z.value }); var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals)
+            var x = 6 + i * (188 / Math.max(1, arr.length - 1))
+            var y = 52 - (mx === mn ? 24 : (l.value - mn) / (mx - mn) * 44)
+            return (i ? '<line x1="' + (6 + (i - 1) * (188 / Math.max(1, arr.length - 1))) + '" y1="' + y + '" x2="' + x + '" y2="' + y + '" stroke="' + METRIC_COLORS[m] + '" stroke-width="2"/>' : '') + '<circle cx="' + x + '" cy="' + y + '" r="2.4" fill="' + METRIC_COLORS[m] + '"/>'
+          }).join('') + '</svg><div class="src">' + esc(rows[0].date) + ' ～ ' + esc(last.date) + ' · 共 ' + rows.length + ' 条 · 不同方法不合并</div>'
+        return '<button class="mcard" data-action="flip" data-code="' + m + '" aria-pressed="' + !!state.flipped[m] + '" aria-label="' + esc(m) + ' 指标卡，按回车翻面看走势">' +
+          '<span class="mcard-inner"><span class="mface front"><span class="cat">' + esc(METRIC_TITLES[m]) + '</span>' +
+          '<span class="mval"><b>' + esc(last.value) + '</b> <i>' + esc(last.unit) + '</i></span>' +
+          '<span class="delta">' + delta + '</span><span class="rec">共 ' + rows.length + ' 次记录</span>' +
+          '<span class="src">' + esc(fmtDate(last.date)) + ' · ' + esc(last.org) + ' · ' + esc(last.method) + ' · 翻面↗</span></span>' +
+          '<span class="mface back">' + back + '</span></span></button>'
+      }).join('')
+      return '<div class="metric-group"><div class="metric-group-head"><h3>' + esc(g.title) + '</h3><span>' + items.length + ' 项</span></div><div class="metric-grid">' + cards + '</div></div>'
     }).join('')
     return (groups || '<div class="empty">还没有指标记录。<div class="actions" style="justify-content:center;margin-top:8px"><button data-action="go" data-page="labs">去化验列表 →</button></div></div>') +
-      '<p class="notice plain">差值只是两次记录之差，不写任何疗效结论；不同方法/机构不合并、不做差。</p>'
+      '<p class="notice plain">差值只是两次记录之差，不写任何疗效结论；不同方法/机构不合并、不做差；心肌标志物与用药安全监测的解读归医生。</p>'
   }
   function recordsSummary() {
     var p = profile()
@@ -605,11 +641,15 @@
       '<div class="actions" style="margin-top:12px"><button class="primary" data-action="pv-export">导出预览（私密过滤后）</button><span class="small-note">整页视图：可 Esc、← 返回、✕ 关闭</span></div>'
   }
 
-  /* ---------- 页面：设置 ---------- */
-  function pageSettings() {
-    var cur = subOf('settings')
-    return head('设置', SUBTITLES.settings, 'settings') + subnav('settings') +
-      (cur === 'workspace' ? setWorkspace() : cur === 'mineru' ? setMineru() : setClinical())
+  /* ---------- 设置弹层（乳腺癌 CFG_TABS 式）+ 临床页 ---------- */
+  function settingsModal(tab) {
+    var t = tab || 'workspace'
+    var body = '<div class="subnav" role="tablist" aria-label="设置分区">' + CFG_TABS.map(function (x) {
+      return '<button role="tab" aria-selected="' + (t === x[0]) + '" data-action="settings-tab" data-tab="' + x[0] + '">' + esc(x[1]) + '</button>'
+    }).join('') + '</div><div style="margin-top:12px">' +
+      (t === 'workspace' ? setWorkspace() : t === 'mineru' ? setMineru() : setClinical()) + '</div>' +
+      '<div class="actions" style="margin-top:10px"><button class="primary" data-action="dialog-close">完成</button></div>'
+    openDialog('设置', body)
   }
   function setWorkspace() {
     return '<section class="card"><h3>业务资料根目录</h3><p>当前（示意值）：<code>DSH 资料目录 / pericarditis</code></p>' +
@@ -628,19 +668,56 @@
       '<p class="notice warn">本仓未接入 MinerU：本页的勾选与保存都不联网。</p></section>'
   }
   function setClinical() {
+    var snap = window.DEMO_DATA.snapshotMeta || { count: 0, date: null }
     return '<section class="card"><h3>临床数据库</h3>' +
-      '<p>快照状态：<b>本台未生成快照</b>（0 条 · 无日期）。</p>' +
-      '<h3 style="margin-top:10px">数据来源与通道终态（如实记录）</h3>' +
-      '<ul><li>在线通道（unified-trial-mcp）：本次夜间开发中 <b>FAILED（未查过）</b>——不能当作「已查过、零结果」。</li>' +
-      '<li>本台为非肿瘤病种：临床试验前端三子页按 DEV-PLAN §四<b>如实裁剪</b>；M4 快照数据底座保留，供本页状态查看。</li>' +
-      '<li>登记状态一律「未核实」；快照会过期，请以官方登记页为准。</li></ul>' +
-      '<p class="pill warn">断网/无快照时空态约束生效</p></section>'
+      '<p>快照状态：<b>' + (snap.count ? snap.count + ' 条 · ' + esc(snap.date) : '本台未生成快照（0 条）') + '</b>；「临床」页可离线浏览。</p>' +
+      '<h3 style="margin-top:10px">数据来源与通道终态（如实记录，FAILED ≠ 查过零结果）</h3>' +
+      '<ul><li>ctv / ictrp / chinadrugtrials：SUCCESS（见临床页）。</li>' +
+      '<li>chictr_online：<b>FAILED（未查过）</b>。</li>' +
+      '<li>chictr_pancreatic_archive：NEEDS_SETUP（离线语料仅胰腺癌覆盖，本台无覆盖）。</li></ul>' +
+      '<p class="small-note">登记状态一律「未核实」；快照会过期，请以官方登记页为准。</p>' +
+      '<div class="actions" style="margin-top:8px"><button class="soft" data-action="go" data-page="clinical">去临床页浏览 →</button></div></section>'
   }
-
+  function pageClinical() {
+    var cur = subOf('clinical')
+    return head('临床', SUBTITLES.clinical, 'clinical') + subnav('clinical') +
+      (cur === 'status' ? clinicalStatus() : clinicalBrowse(''))
+  }
+  function clinicalStatus() {
+    var snap = window.DEMO_DATA.snapshotMeta || {}
+    return '<section class="card"><h3>快照状态</h3>' +
+      '<p>' + (snap.count ? '共 <b>' + snap.count + '</b> 条登记（合并同登记号后）· 快照日期 ' + esc(snap.date) : '本台未生成快照。') + '</p>' +
+      '<h3 style="margin-top:10px">来源通道终态（如实）</h3>' +
+      '<div class="table-wrap"><table><thead><tr><th>通道</th><th>终态</th><th>说明</th></tr></thead><tbody>' +
+      '<tr><td>ctv（ClinicalTrials.gov 本地索引）</td><td><span class="pill ok">SUCCESS</span></td><td>检索成功；零命中只代表本地索引未命中</td></tr>' +
+      '<tr><td>ictrp（WHO ICTRP）</td><td><span class="pill ok">SUCCESS</span></td><td>上游导出存在已知静默缺口</td></tr>' +
+      '<tr><td>chinadrugtrials</td><td><span class="pill ok">SUCCESS</span></td><td>中文关键词命中</td></tr>' +
+      '<tr><td>chictr_online</td><td><span class="pill warn">FAILED</span></td><td><b>未查过</b>——不能当作零结果；晨审重跑</td></tr>' +
+      '<tr><td>chictr_pancreatic_archive</td><td><span class="pill warn">NEEDS_SETUP</span></td><td>离线语料仅胰腺癌覆盖，本台无覆盖</td></tr>' +
+      '</tbody></table></div><p class="scroll-hint">← 左右滑动查看 →</p>' +
+      '<p class="notice plain">本页与「设置 · 临床数据库」tab 同一份数据口径（E10）。</p></section>'
+  }
+  function trialRows(rows) {
+    if (!rows.length) return '<div class="empty">没有命中的登记。换关键词，或回「数据库状态」看通道终态。</div>'
+    return '<div class="table-wrap"><table><thead><tr><th>登记号</th><th>题目</th><th>类型</th><th>状态</th><th>来源</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var reg = (r.registryNumbers || []).map(function (x) { return x.value }).join(' / ') || r.recordId
+        return '<tr><td>' + esc(reg) + '</td><td style="white-space:normal;min-width:220px">' + esc(r.title || '') + '</td><td>' + esc(r.studyType || '—') + '</td><td>' + esc(r.statusNote || '登记状态，未核实') + '</td><td>' + esc(r.source || '') + '</td></tr>'
+      }).join('') + '</tbody></table></div><p class="scroll-hint">← 左右滑动查看 →</p>'
+  }
+  function clinicalBrowse(keyword) {
+    var demo = window.DEMO_DATA.trialsDemo || []
+    return '<section class="card"><h3>登记浏览</h3>' +
+      '<p class="small-note">快照离线检索；按你选的条件排，<b>不做匹配打分，不预测入选机会</b>。登记状态一律「未核实」。</p>' +
+      '<div class="form-grid" style="grid-template-columns:1fr"><label>关键词（题目包含）<input type="search" id="trial-kw" value="' + esc(keyword || '') + '" placeholder="如 colchicine / 心包"></label></div>' +
+      '<div class="actions" style="margin:8px 0 12px"><button class="primary" data-action="trial-search">检索快照</button></div>' +
+      '<div id="trial-result">' + trialRows(demo) + '</div>' +
+      '<p class="notice plain">原型内置 5 条<b>虚构示例</b>（不是真实研究，不含可用登记号）；开发版从本机快照（97 条）检索，术语与状态以官方登记页为准。</p></section>'
+  }
   /* ---------- 导航与渲染 ---------- */
   function navIcons(key) {
     var icons = {
-      home: '⌂', wave: '〰', flask: '⚗', pill: '💊', bag: '🧳', file: '📄', heart: '♡', folder: '🗂', gear: '⚙'
+      home: '⌂', wave: '〰', flask: '⚗', pill: '💊', bag: '🧳', file: '📄', heart: '♡', folder: '🗂', micro: '🧪'
     }
     return icons[key] || '·'
   }
@@ -654,7 +731,7 @@
   function pageFor(key) {
     return {
       dash: pageDash, events: pageEvents, labs: pageLabs, treatment: pageTreatment,
-      visits: pageVisits, reports: pageReports, mind: pageMind, records: pageRecords, settings: pageSettings
+      visits: pageVisits, reports: pageReports, mind: pageMind, records: pageRecords, clinical: pageClinical
     }[key]
   }
   function paintProfile() {
@@ -877,7 +954,9 @@
       document.body.classList.toggle('large')
       btn.setAttribute('aria-pressed', String(document.body.classList.contains('large')))
     }
-    else if (act === 'settings') { go('settings'); navigate('settings', subOf('settings')) }
+    else if (act === 'settings') { settingsModal('workspace') }
+    else if (act === 'settings-tab') { settingsModal(btn.getAttribute('data-tab')) }
+    else if (act === 'trial-search') { doTrialSearch() }
     else if (act === 'open-store') { openDialog('资料目录', '<p>开发版中选择本机目录；口径：拒绝主目录、桌面、下载根目录、tmp。</p><p>本原型为示意，目录未真实挂载。</p>') }
     else if (act === 'about') { openDialog('原型操作说明', '<p>全部数据为合成示例（两套档案，侧栏可切换）。</p><p>顶部「?」打开整页疾病概要；每页「和 AI 讨论」只填草稿不发送。</p><p>私密记录不进看板摘要、导出与 AI 上下文。</p>') }
     else if (act === 'dialog-close') { $('#dialog').close() }
@@ -930,6 +1009,26 @@
     else if (act === 'pv-report') { openPvLayer('报告详情', reportDetailHtml(btn.getAttribute('data-id'))) }
     else if (act === 'pv-labs') { openPvLayer('化验记录', labsLayerHtml()) }
   })
+  /* 临床检索：开发版优先本机快照 API，失败/独立打开回退内置示例（不裸 throw） */
+  function doTrialSearch() {
+    var kw = ($('#trial-kw') || {}).value || ''
+    var base = window.__PERI_API_BASE__
+    var done = function (rows, note) {
+      $('#trial-result').innerHTML = trialRows(rows) + (note ? '<p class="notice plain">' + esc(note) + '</p>' : '')
+    }
+    if (base) {
+      fetch(base + '/api/trials?keyword=' + encodeURIComponent(kw))
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json() })
+        .then(function (d) { done((d.records || []), d.available === false ? '快照不可用：' + (d.reason || '') : '共 ' + (d.records || []).length + ' 条命中 · 登记状态未核实') })
+        .catch(function () { done(demoFilter(kw), '快照接口不可用，回退内置示例（虚构条目）。') })
+    } else {
+      done(demoFilter(kw), '原型内置示例（虚构条目）；开发版从本机快照检索。')
+    }
+  }
+  function demoFilter(kw) {
+    kw = (kw || '').trim()
+    return (window.DEMO_DATA.trialsDemo || []).filter(function (r) { return !kw || (r.title || '').indexOf(kw) >= 0 })
+  }
   function sharedIndex(list, shownIndex) {
     var shared = list.filter(function (z) { return !z.private })
     return list.indexOf(shared[shownIndex])
@@ -1031,7 +1130,7 @@
   global.pageReports = pageReports
   global.pageMind = pageMind
   global.pageRecords = pageRecords
-  global.pageSettings = pageSettings
+  global.pageClinical = pageClinical
 
   /* 探针钩子：只暴露只读视图与渲染入口，业务逻辑不外泄 */
   global.__PERI_APP__ = {
@@ -1077,9 +1176,8 @@ const ROUTES = {
   'records/archive': pageRecords,
   'records/metrics': pageRecords,
   'records/summary': pageRecords,
-  'settings/workspace': pageSettings,
-  'settings/mineru': pageSettings,
-  'settings/clinical': pageSettings
+  'clinical/status': pageClinical,
+  'clinical/browse': pageClinical
 };
 
 
@@ -1110,11 +1208,12 @@ const ROUTES = {
       app.state.page = 'dash'
       app.state.sub = {}
       app.state.range = 'all'
-      app.state.picked = { CRP: true, ESR: true, '体温': false }
+      app.state.picked = { CRP: true, ESR: true, WBC: false, cTnI: false, 'NT-proBNP': false, ALT: false, Cr: false, '体温': false }
       app.state.showEpisodes = true
       app.state.flipped = {}
       app.render()
     }
+    window.__PERI_API_BASE__ = apiBase
     console.info('[pericarditis] 已切换到本机数据库数据（' + b.profiles.length + ' 个档案）')
   }).catch(function (e) {
     console.warn('[pericarditis] bootstrap 不可用，继续使用演示数据：', String(e && e.message || e))

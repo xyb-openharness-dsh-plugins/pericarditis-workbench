@@ -99,5 +99,5 @@ test('section_titles / metric_defs 读出（分节标题进表，不用 subjects
   assert.equal(titles.length, 1);
   assert.equal(titles[0].title, '化验与趋势');
   const defs = rm.readMetricDefs(db);
-  assert.deepEqual(defs.map((m) => m.title), ['CRP', 'ESR', '体温']);
+  assert.deepEqual(defs.map((m) => m.title), ['CRP', 'ESR', 'WBC', 'cTnI', 'NT-proBNP', 'ALT', 'Cr', '体温']);
 });

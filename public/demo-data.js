@@ -5,6 +5,34 @@
  */
 window.DEMO_DATA = {
   TODAY: '2026-11-07',
+  /* 指标元数据（唯一源）：app.js 与服务端 metric_defs 都从这里读 */
+  metricDefs: [
+    { key: 'CRP', db: 'crp', title: 'C 反应蛋白（CRP）', category: 'inflammation', unit: 'mg/L', color: '#2f6f8f', ord: 0 },
+    { key: 'ESR', db: 'esr', title: '红细胞沉降率（ESR）', category: 'inflammation', unit: 'mm/h', color: '#c96f2f', ord: 1 },
+    { key: 'WBC', db: 'wbc', title: '白细胞（WBC）', category: 'hemogram', unit: '×10⁹/L', color: '#2e7d5b', ord: 2 },
+    { key: 'cTnI', db: 'ctni', title: '肌钙蛋白 I（cTnI）', category: 'cardiac', unit: 'ng/L', color: '#a3405e', ord: 3 },
+    { key: 'NT-proBNP', db: 'ntbnp', title: 'NT-proBNP', category: 'cardiac', unit: 'pg/mL', color: '#6b5b95', ord: 4 },
+    { key: 'ALT', db: 'alt', title: '丙氨酸转氨酶（ALT）', category: 'safety', unit: 'U/L', color: '#b98a1f', ord: 5 },
+    { key: 'Cr', db: 'cr', title: '血肌酐（Cr）', category: 'safety', unit: 'µmol/L', color: '#5a7d2a', ord: 6 },
+    { key: '体温', db: 'temp', title: '体温', category: 'vitals', unit: '℃', color: '#8a5a44', ord: 7 }
+  ],
+  metricGroups: [
+    { key: 'inflammation', title: '炎症指标', items: ['CRP', 'ESR'] },
+    { key: 'hemogram', title: '血象', items: ['WBC'] },
+    { key: 'cardiac', title: '心肌标志物', items: ['cTnI', 'NT-proBNP'] },
+    { key: 'safety', title: '用药安全监测（基线与随访）', items: ['ALT', 'Cr'] },
+    { key: 'vitals', title: '体征', items: ['体温'] }
+  ],
+  /* M4 快照元信息（与 research/pericarditis/manifest.json 一致；clinical 页与设置 tab 同口径） */
+  snapshotMeta: { count: 97, date: '2026-11-07' },
+  /* 临床登记浏览的内置示例：虚构条目，不是真实研究，不含可用登记号（35 号 E2 口径） */
+  trialsDemo: [
+    { recordId: 'demo-t1', registryNumbers: [{ registry: 'NCT', value: 'NCT-DEMO-001' }], title: '（虚构示例）秋水仙碱在复发性心包炎维持缓解中的登记研究', studyType: '介入性', source: '快照摘录', statusNote: '登记状态，未核实' },
+    { recordId: 'demo-t2', registryNumbers: [{ registry: 'NCT', value: 'NCT-DEMO-002' }], title: '（虚构示例）IL-1 拮抗剂治疗复发性心包炎的有效性与安全性观察', studyType: '介入性', source: '快照摘录', statusNote: '登记状态，未核实' },
+    { recordId: 'demo-t3', registryNumbers: [{ registry: 'ChiCTR', value: 'ChiCTR-DEMO-003' }], title: '（虚构示例）复发性心包炎患者报告结局与随访节奏的队列登记', studyType: '观察性', source: '快照摘录', statusNote: '登记状态，未核实' },
+    { recordId: 'demo-t4', registryNumbers: [{ registry: 'EUCTR', value: 'EUCTR-DEMO-004' }], title: '（虚构示例）心包炎综合征长期炎症指标监测的多中心登记', studyType: '观察性', source: '快照摘录', statusNote: '登记状态，未核实' },
+    { recordId: 'demo-t5', registryNumbers: [{ registry: 'NCT', value: 'NCT-DEMO-005' }], title: '（虚构示例）皮质激素减量方案在复发性心包炎中的比较研究', studyType: '介入性', source: '快照摘录', statusNote: '登记状态，未核实' }
+  ],
   profiles: [
     {
       id: 'demo-a',
@@ -26,7 +54,11 @@ window.DEMO_DATA = {
         { id: 'a-l2', metric: 'ESR', date: '2026-09-21', value: 52, unit: 'mm/h', method: 'Westergren', org: '示例市第一医院', private: false },
         { id: 'a-l3', metric: 'CRP', date: '2026-10-08', value: 14, unit: 'mg/L', method: '免疫比浊', org: '示例市第一医院', private: false },
         { id: 'a-l4', metric: 'CRP', date: '2026-10-24', value: 41, unit: 'mg/L', method: '免疫比浊', org: '示例市第一医院', private: false },
-        { id: 'a-l5', metric: '体温', date: '2026-09-21', value: 37.6, unit: '℃', method: '腋表', org: '自录', private: false }
+        { id: 'a-l5', metric: '体温', date: '2026-09-21', value: 37.6, unit: '℃', method: '腋表', org: '自录', private: false },
+        { id: 'a-l6', metric: 'WBC', date: '2026-09-21', value: 9.6, unit: '×10⁹/L', method: '血常规 五分类', org: '示例市第一医院', private: false },
+        { id: 'a-l7', metric: 'cTnI', date: '2026-09-21', value: 24, unit: 'ng/L', method: 'hs-cTnI 免疫发光', org: '示例市第一医院', private: false },
+        { id: 'a-l8', metric: 'ALT', date: '2026-10-24', value: 31, unit: 'U/L', method: '速率法', org: '示例市第一医院', private: false },
+        { id: 'a-l9', metric: 'Cr', date: '2026-10-24', value: 68, unit: 'µmol/L', method: '苦味酸法', org: '示例市第一医院', private: false }
       ],
       treatments: [
         { id: 'a-t1', date: '2026-09-21', kind: '按次', name: '秋水仙碱（医生处方）', note: '开始服用；剂量与疗程见处方原件，本台不录判定', private: false },
@@ -97,7 +129,19 @@ window.DEMO_DATA = {
         { id: 'b-l17', metric: 'ESR', date: '2026-11-04', value: 21, unit: 'mm/h', method: '微量法', org: '示例市第一医院', private: false },
         { id: 'b-l18', metric: '体温', date: '2026-10-28', value: 37.8, unit: '℃', method: '腋表', org: '自录', private: false },
         { id: 'b-l19', metric: '体温', date: '2026-11-02', value: 36.6, unit: '℃', method: '腋表', org: '自录', private: false },
-        { id: 'b-l20', metric: 'CRP', date: '2026-09-14', value: 19, unit: 'mg/L', method: '免疫比浊', org: '示例市中心医院', private: true }
+        { id: 'b-l20', metric: 'CRP', date: '2026-09-14', value: 19, unit: 'mg/L', method: '免疫比浊', org: '示例市中心医院', private: true },
+        { id: 'b-l21', metric: 'WBC', date: '2024-03-11', value: 11.2, unit: '×10⁹/L', method: '血常规 五分类', org: '示例市中心医院', private: false },
+        { id: 'b-l22', metric: 'WBC', date: '2025-08-16', value: 8.9, unit: '×10⁹/L', method: '血常规 五分类', org: '示例市中心医院', private: false },
+        { id: 'b-l23', metric: 'WBC', date: '2026-10-29', value: 7.4, unit: '×10⁹/L', method: '血常规 五分类', org: '示例市中心医院', private: false },
+        { id: 'b-l24', metric: 'cTnI', date: '2024-03-11', value: 38, unit: 'ng/L', method: 'hs-cTnI 免疫发光', org: '示例市中心医院', private: false },
+        { id: 'b-l25', metric: 'cTnI', date: '2026-10-29', value: 15, unit: 'ng/L', method: 'hs-cTnI 免疫发光', org: '示例市中心医院', private: false },
+        { id: 'b-l26', metric: 'NT-proBNP', date: '2025-08-16', value: 210, unit: 'pg/mL', method: '免疫发光', org: '示例市中心医院', private: false },
+        { id: 'b-l27', metric: 'NT-proBNP', date: '2026-10-29', value: 96, unit: 'pg/mL', method: '免疫发光', org: '示例市中心医院', private: false },
+        { id: 'b-l28', metric: 'ALT', date: '2025-01-10', value: 26, unit: 'U/L', method: '速率法', org: '示例市中心医院', private: false },
+        { id: 'b-l29', metric: 'ALT', date: '2025-09-10', value: 42, unit: 'U/L', method: '速率法', org: '示例市中心医院', private: false },
+        { id: 'b-l30', metric: 'ALT', date: '2026-11-04', value: 29, unit: 'U/L', method: '速率法', org: '示例市第一医院', private: false },
+        { id: 'b-l31', metric: 'Cr', date: '2025-01-10', value: 74, unit: 'µmol/L', method: '苦味酸法', org: '示例市中心医院', private: false },
+        { id: 'b-l32', metric: 'Cr', date: '2026-11-04', value: 71, unit: 'µmol/L', method: '苦味酸法', org: '示例市第一医院', private: false }
       ],
       treatments: [
         { id: 'b-t01', date: '2024-03-11', kind: '按次', name: '秋水仙碱（医生处方）', note: '首次发作开始', private: false },
