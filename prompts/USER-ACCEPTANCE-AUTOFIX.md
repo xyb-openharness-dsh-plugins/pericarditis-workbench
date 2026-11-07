@@ -8,11 +8,28 @@
 
 你是本工作台仓（prototypes/v0.2 + public + dsh 服务层）的验收问题巡检与修复 Agent。按下面 A–F 六类**逐类先检查、后修复**，每类给出：检查命令/探针、判定标准（三态：通过/失败/待人工）、修复动作、修复后的回归断言。任何「通过」必须带数字或 file:line，否则写「未测」。
 
+## 0. 适用时机与适配（新病种仓必读）
+
+- 本提示词在 **M5 完成后**生效（M5 前没有 public/ 与探针，跑了是空转）。M0–M5 期间按夜纲检查点清单执行。
+- 本仓专用的探针/迁移文件在新病种仓不存在——**M5 移植时一并从 pericarditis-workbench 移植并按病种改写**：`scripts/probe-<slug>-m2.mjs`（36 条断言模板）、`scripts/migrate-public.mjs`（public 定点移植 + ui-parity 双闸）、`scripts/check-ui-parity.mjs`、`prototypes/vX.Y/trial-match.js`（35 号纯函数）、primer 三件套接线。这是 M5「七步移植」的一部分，不是可选项。
+- 修复轮次硬上限 **2 轮**（与夜纲一致）：同一检查项修 2 轮仍红 → 停手写停修报告，不整夜空转。
+
 ## 开工三步（不做完不许改代码）
 
 1. 跑基线：`npm run check`、`npm test`、`npm run audit`、`node scripts/probe-pericarditis-m2.mjs`（家族探针按各仓命名），失败数字照抄，只修相关子集，收尾全量复跑。
 2. **在「宿主形态」复现用户问题**（`npm start -- --root <用户指定目录>` 后用无头浏览器点真实按钮）；`file://` 原型正常 ≠ 宿主正常——本轮「指标卡翻转无」「设置打不开」都是宿主形态才暴露的形态差。复现不出时：按最坏假设做防御性修复（双通道），并在报告里写「本地未复现，已按假设加固 + 需真机截图定位」。
 3. 对照家族参考仓（只读）：设置/弹层/卡片交互看 `breast-cancer-workbench/prototypes/v0.4/`，试验线看 35 号文档与 `takayasu-workbench` 的 dsh 服务层。
+
+## DP. 疾病概要（？号按钮——历史上最容易整条漏掉，每轮必查第一条）
+
+- 检查：
+  1. 顶栏存在可点的「?」（`[data-primer-open]`），aria-label 含「定义」与「趋势」；
+  2. 首页状态卡有第二个入口；
+  3. 点击后 `#disease-primer` 面板真实出现（primer.js 动态建 DOM——**index.html 里搜不到容器是正常的，搜不到 primer.js/primer.css/primer-data.js 三件才是缺失**）；
+  4. 四段标题按序：定义→医学资料规范和指南情况→治疗全景→发展趋势；每段来源行；返回/✕ 双入口；Esc 退一层；
+  5. **探针必须用 `--url` 指向本仓原型**（`node scripts/probe-disease-primer.mjs --url http://127.0.0.1:<port>/prototypes/v0.2/index.html`）——默认跑的是 starter examples 参考页，等于没查（家族真实发生过）。
+- 修复：缺三件套 → 从 breast-cancer v0.4 或 pericarditis v0.2 拷 `primer.js`/`primer.css`（零耦合可直拷），`primer-data.js` 按本病种重写（window.DISEASE_PRIMER 字面量，四段 id 固定 definition/evidence/landscape/trend，来源行按「原件/官方入口/二次来源/nolink+note」四态）；index.html 按 demo-data→primer-data→primer→app 顺序加载；顶栏与首页各放一个 `data-primer-open` 入口。
+- 回归：probe-disease-primer 10/10（本仓 URL）+ check-primer-links 全绿（--http 夜间可跳过并如实记 SKIP）。
 
 ## A. 设置与弹层（乳腺癌 CFG_TABS 形态）
 
@@ -60,5 +77,5 @@
 2. **改包必升版**：patch-version → CHANGELOG 段 → `npm run build:version && npm run build:client` → `node scripts/migrate-public.mjs` 重生成 public（ui-parity 双闸必须绿）。
 3. **演示唯一源**：数据改动只改 `prototypes/v0.2/demo-data.js`；服务端种子读该文件（装包回退 public 副本）；发现手工镜像数据立即重构掉。
 4. **门禁全绿才算修完**：check / test / audit 全 exit 0，探针全套过；audit「待人工」项（如 CHANGELOG 缺版本号）当场清零。
-5. **真机回归**：`npm pack --pack-destination release` → 按仓内 check-install.mjs 提示用**绝对路径** tgz 装入 DSH Desktop profile → bundles 登记 → 重启 → `verify-desktop-load.mjs` exit 0。dev-server 通过 ≠ 装机通过。
+5. **真机回归**：`npm pack --pack-destination release` → 按仓内 check-install.mjs 提示用**绝对路径** tgz 装入 DSH Desktop profile → bundles 登记 → 重启 → `verify-desktop-load.mjs` exit 0。dev-server 通过 ≠ 装机通过。**push 失败最多重试 2 次即放弃**（HTTP/1.1 降级再试一次），本地 commit 即视为里程碑完成——网络不阻塞主循环，晨审补推。
 6. **汇报三态**：本地复现修复的写实测数字；本地未复现、按假设加固的写「未复现 + 加固 + 需真机验证」；没做的写未实现。禁止「大体完成」。
