@@ -95,4 +95,4 @@ node scripts/probe-pericarditis-m2.mjs        # M2 真实浏览器探针（IP/C/
 node scripts/probe-disease-primer.mjs --url http://127.0.0.1:8127/prototypes/v0.2/index.html
 node scripts/probe-page-view.mjs --url http://127.0.0.1:8127/prototypes/v0.2/index.html
 ```
-版本 0.1.1（包）/ 原型 v0.2；文档九件见 docs/；各闸口签认见 docs/signoffs/。
+版本 0.1.2（包）/ 原型 v0.2；验收巡检与修复提示词见 [prompts/USER-ACCEPTANCE-AUTOFIX.md](prompts/USER-ACCEPTANCE-AUTOFIX.md)；文档九件见 docs/；各闸口签认见 docs/signoffs/。
