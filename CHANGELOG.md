@@ -1,3 +1,12 @@
+## 0.1.4 — 2026-11-13
+
+三缺口批量补齐（AC 型：只剩资料目录入口与新建患者）：
+
+- **A 资料目录**：面板顶栏新增「配置目录」→ `uiWorkspace.pickDirectory()` → 口径硬拒（主目录本身/桌面/下载根/tmp，客户端+服务端 `checkDataDir` 双判）→ `POST /api/pericarditis/api/root` 落盘回显；新增 `schema/0002_app_setting.sql`（只增）让重开仍在，切库失败回滚原库。
+- **C 新建患者**：`Workbench.listSubjects/createSubject/deleteSubject`（`is_demo=0`、`local-<时间戳>` 键、demo 不可删）；服务端 `GET/POST/DELETE /api/pericarditis/api/subjects`；档案弹窗加「＋ 新建我的档案」→ 建完自动切过去（空记录起步）。
+- 校验：三闸门全绿；`npm run check` 全绿；`audit 43/44`（0 失败，1 待人工）；迁移表数断言 18→19（0002 新增 app_setting）。
+- 未验证：界面加载与点击（需重开 Desktop 后人工走查）。
+
 ## 0.1.3（2026-11-11，AI 对话面板激活修复）
 
 - 会话判定改用宿主归属 `ownedSession()`（`ownsSession(currentSession())`），不再用 `Boolean(conversation)`（customFrame 下没会话也会传隐藏容器 → 判断恒为真 → 点了没反应）。

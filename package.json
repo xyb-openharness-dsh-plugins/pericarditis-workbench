@@ -1,6 +1,6 @@
 {
   "name": "@xyb-community/pericarditis-workbench",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "本机优先的复发性心包炎发作—缓解记录、CRP/ESR 化验趋势、按次治疗登记、复诊准备工作台（合成演示）",
   "private": true,
   "type": "module",
@@ -24,7 +24,7 @@
     "NOTICE.md"
   ],
   "scripts": {
-    "check": "node --check dsh/index.js && node --check lib/client.js && node scripts/check-workbench-package.mjs . && node scripts/check-host-contract.mjs && node scripts/smoke-activate.mjs && node scripts/check-probe-coverage.mjs && node scripts/check-version-literal.mjs && node scripts/check-static-refs.mjs && node scripts/check-choice-limit.mjs && node scripts/check-assertion-strength.mjs && node scripts/check-derivative-leftovers.mjs . && node scripts/check-trial-snapshot.mjs . --if-present && node scripts/check-schema-words.mjs . && node scripts/check-primer-links.mjs && node scripts/build-version.mjs --check && node scripts/build-client.mjs --check && node scripts/migrate-public.mjs --check && node scripts/check-public-tokens.mjs && node scripts/check-wording.mjs . && node scripts/check-ui-parity.mjs && node --disable-warning=ExperimentalWarning --test --test-concurrency=1 test/*.test.mjs && node scripts/check-agent-pane-contract.mjs .",
+    "check": "node --check dsh/index.js && node --check lib/client.js && node scripts/check-workbench-package.mjs . && node scripts/check-host-contract.mjs && node scripts/smoke-activate.mjs && node scripts/check-probe-coverage.mjs && node scripts/check-version-literal.mjs && node scripts/check-static-refs.mjs && node scripts/check-choice-limit.mjs && node scripts/check-assertion-strength.mjs && node scripts/check-derivative-leftovers.mjs . && node scripts/check-trial-snapshot.mjs . --if-present && node scripts/check-schema-words.mjs . && node scripts/check-primer-links.mjs && node scripts/build-version.mjs --check && node scripts/build-client.mjs --check && node scripts/migrate-public.mjs --check && node scripts/check-public-tokens.mjs && node scripts/check-wording.mjs . && node scripts/check-ui-parity.mjs && node --disable-warning=ExperimentalWarning --test --test-concurrency=1 test/*.test.mjs && node scripts/check-agent-pane-contract.mjs . && node scripts/check-data-dir.mjs . && node scripts/check-trial-chain.mjs . && node scripts/check-patient-create.mjs .",
     "build:version": "node scripts/build-version.mjs",
     "build:client": "node scripts/build-client.mjs",
     "build:public": "node scripts/migrate-public.mjs",

@@ -1123,6 +1123,8 @@
       agentDraft(state.draft.aiPrompt)
     }
     else if (act === 'profiles') { openProfiles() }
+    else if (act === 'new-profile') { newProfileForm() }
+    else if (act === 'save-new-profile') { saveNewProfile() }
     else if (act === 'pick-profile') {
       state.profileId = btn.getAttribute('data-id')
       state.sessions = {}
@@ -1269,9 +1271,49 @@
   function closeDialog() { var d = $('#dialog'); if (d.open) d.close() }
   function openProfiles() {
     var html = DATA.profiles.map(function (p) {
-      return '<button style="width:100%;text-align:left;margin-bottom:8px" data-action="pick-profile" data-id="' + p.id + '" aria-pressed="' + (p.id === state.profileId) + '"><b>' + esc(p.name) + '</b> · ' + esc(p.tag) + '</button>'
-    }).join('') + '<p class="small-note">切换后整页数据联动；会话与草稿按档案隔离。全部为合成示例。</p>'
-    openDialog('切换演示档案', html)
+      return '<button style="width:100%;text-align:left;margin-bottom:8px" data-action="pick-profile" data-id="' + p.id + '" aria-pressed="' + (p.id === state.profileId) + '"><b>' + esc(p.name) + '</b> · ' + esc(p.tag) + (p.isDemo === false ? ' · 我建的' : '') + '</button>'
+    }).join('') +
+      '<button style="width:100%;text-align:left;margin-bottom:8px" data-action="new-profile"><b>＋ 新建我的档案</b> · 演示档案不会被改动，新档案存本机数据库</button>' +
+      '<p class="small-note">切换后整页数据联动；会话与草稿按档案隔离。带「演示」字样的是合成示例，新建的是真实记录。</p>'
+    openDialog('切换档案', html)
+  }
+
+  /* 新建患者档案：demo 之外的第二类数据（is_demo=0，落本机 sqlite）。 */
+  function newProfileForm() {
+    openDialog('新建我的档案',
+      '<p class="small-note">只填名字（可以是昵称）；演示档案不会被改动，新档案从空记录开始。</p>' +
+      '<label style="display:block;margin-top:8px">档案名<input id="np-name" maxlength="40" placeholder="例：我自己 / 妈妈" style="display:block;width:100%;margin-top:4px"></label>' +
+      '<label style="display:block;margin-top:8px">一句话说明（可选）<input id="np-meta" maxlength="40" placeholder="例：确诊 2025-03 · 随访中" style="display:block;width:100%;margin-top:4px"></label>' +
+      '<p id="np-err" class="small-note" style="color:#a33" hidden></p>' +
+      '<div style="margin-top:10px"><button class="primary" data-action="save-new-profile">保存并切换</button> <button data-action="dialog-close">取消</button></div>')
+  }
+
+  function saveNewProfile() {
+    var nameEl = $('#np-name'); var metaEl = $('#np-meta'); var errEl = $('#np-err')
+    var name = (nameEl && nameEl.value || '').trim()
+    var meta = (metaEl && metaEl.value || '').trim()
+    var base = window.__PERI_API_BASE__ || ''
+    if (!name) { if (errEl) { errEl.hidden = false; errEl.textContent = '请填写档案名。' }; return }
+    if (!base) { if (errEl) { errEl.hidden = false; errEl.textContent = '原型预览没有本机服务：新建档案需装进 Desktop 后在面板里使用。' }; return }
+    fetch(base + '/api/subjects', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: name, meta: meta }),
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }) }).then(function (res) {
+      if (!res.ok) throw new Error(res.data.error || res.data.detail || '新建失败')
+      var slug = res.data.profileKey
+      var proto = DATA.profiles[0] || {}
+      var made = {}
+      Object.keys(proto).forEach(function (k) {
+        if (k === 'id' || k === 'name') return
+        var v = proto[k]
+        made[k] = Array.isArray(v) ? [] : (v && typeof v === 'object' ? {} : (typeof v === 'number' ? 0 : ''))
+      })
+      made.id = slug; made.name = name; made.isDemo = false
+      if (meta) made.tag = meta
+      DATA.profiles.push(made)
+      if (window.__PERI_APP__) { window.__PERI_APP__.state.profileId = slug; window.__PERI_APP__.render() }
+      closeDialog(); toast('已新建并切换到「' + name + '」；演示档案没有被改动')
+    }).catch(function (e) { if (errEl) { errEl.hidden = false; errEl.textContent = '新建失败：' + (e.message || e) } })
   }
 
   /* 面板拖宽 25–45%，键盘步进 2% */

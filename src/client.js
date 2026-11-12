@@ -19,6 +19,11 @@
 
 export const UI_ENTRY = '/pericarditis/'
 export const HEALTH_URL = '/api/pericarditis/api/health'
+export const DATA_ROOT_URL = '/api/pericarditis/api/root'
+/* 资料目录口径（与服务端 checkDataDir 一致；服务端会再判一遍） */
+const HOME_EXACT = /^(\/Users\/[^/]+|\/home\/[^/]+|\/root|[A-Za-z]:\\Users\\[^\\]+)$/i
+const FORBIDDEN_DIR = /((Desktop|桌面)$|(Downloads?|下载(夹)?)$|^(\/tmp|\/private\/tmp|\/var\/folders\/|\/private\/var\/folders\/))/i
+const isForbiddenDir = (dir) => HOME_EXACT.test(dir) || FORBIDDEN_DIR.test(dir)
 
 export const META = {
   title: '小包宝 PeriPal · 复发性心包炎工作台',
@@ -398,6 +403,48 @@ export function buildPanel(React, layout, host) {
       return () => window.removeEventListener('message', onMessage)
     }, [])
 
+    /* 当前资料目录：开面板读一次；换过之后立即回显 */
+    React.useEffect(() => {
+      let alive = true
+      fetch(DATA_ROOT_URL, { credentials: 'same-origin' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((info) => { if (alive && info && info.dir) setDataDir(info.dir) })
+        .catch(() => { /* 读不到就不显示，别编一个路径 */ })
+      return () => { alive = false }
+    }, [])
+
+    /* 「配置目录」= 真入口：宿主选择器 → 口径校验 → 落盘 → 回显。 */
+    async function pickDataDir() {
+      const ui = bridge && bridge.uiWorkspace
+      if (!ui || typeof ui.pickDirectory !== 'function') {
+        setDirNote('本原型为示意，目录未真实挂载：当前 Desktop 没有提供目录选择能力，数据仍写在默认位置。')
+        return
+      }
+      let dir = ''
+      try { dir = await ui.pickDirectory() } catch (error) {
+        setDirNote('没能打开目录选择器：' + ((error && error.message) || error))
+        return
+      }
+      if (!dir) { setDirNote('已取消选择目录；当前资料目录没有更改。'); return }
+      if (isForbiddenDir(dir)) {
+        setDirNote('这个位置不能当资料目录（主目录本身 / 桌面 / 下载根目录 / tmp）。请在里面新建一个专用文件夹再选。')
+        return
+      }
+      try {
+        const rsp = await fetch(DATA_ROOT_URL, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ dir }),
+        })
+        const body = await rsp.json().catch(() => ({}))
+        if (!rsp.ok) { setDirNote(body.error || '目录切换失败'); return }
+        setDataDir(body.dir || dir)
+        setDirNote('资料目录已切换到：' + (body.dir || dir) + '（旧目录数据不会自动搬迁）')
+      } catch (error) {
+        setDirNote('目录切换失败：' + ((error && error.message) || error))
+      }
+    }
+
     const agentLabel = !canOpenSession
       ? 'AI 对话暂不可用'
       : connecting ? '正在连接…'
@@ -436,6 +483,13 @@ export function buildPanel(React, layout, host) {
         h('span', { 'aria-live': 'polite' }, version ? `v${version}` : '连接中'),
         h('span', { style: hintStyle, title: shownNote || '界面由 public/ 提供，与原型同源' },
           shownNote || '本机数据'),
+        h('button', {
+          type: 'button',
+          style: ghostStyle,
+          onClick: pickDataDir,
+          'aria-label': dataDir ? `配置目录：当前 ${dataDir}` : '配置资料目录',
+          title: dataDir ? `当前资料目录：${dataDir}` : '选择本机资料目录',
+        }, dataDir ? '配置目录 · 已设' : '配置目录'),
         h('button', {
           type: 'button',
           style: buttonStyle,

@@ -76,6 +76,29 @@ function stripMount(pathname) {
   return pathname;
 }
 
+/**
+ * 资料目录口径（与面板同一条规则，服务端再判一遍）：主目录本身/桌面/下载根/tmp 一律拒绝。
+ */
+export function checkDataDir(raw) {
+  const dir = String(raw || '').trim();
+  if (!dir) return { ok: false, reason: '目录为空' };
+  if (!isAbsolute(dir)) return { ok: false, reason: '请选择绝对路径' };
+  if (/^(\/Users\/[^/]+|\/home\/[^/]+|\/root|[A-Za-z]:\\Users\\[^\\]+)$/i.test(dir)) return { ok: false, reason: '主目录本身不作为资料目录，请在下面建一个专用文件夹' };
+  if (/(Desktop|桌面)$/i.test(dir)) return { ok: false, reason: '桌面不作为资料目录' };
+  if (/(Downloads?|下载(夹)?)$/i.test(dir)) return { ok: false, reason: '下载根目录不作为资料目录' };
+  if (/^(\/tmp|\/private\/tmp|\/var\/folders\/|\/private\/var\/folders\/)/i.test(dir)) return { ok: false, reason: 'tmp 不作为资料目录（会被系统清理）' };
+  return { ok: true, dir };
+}
+
+function readJsonBody(req) {
+  return new Promise((resolve) => {
+    let raw = '';
+    req.on('data', (chunk) => { if (raw.length < 64 * 1024) raw += chunk; });
+    req.on('end', () => { try { resolve(JSON.parse(raw || '{}')); } catch { resolve({}); } });
+    req.on('error', () => resolve({}));
+  });
+}
+
 export function createHandler({ apiBase = '', publicDir, services }) {
   const sendJson = (res, status, body) => {
     res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -109,6 +132,35 @@ export function createHandler({ apiBase = '', publicDir, services }) {
         return sendJson(res, 500, { error: 'trials failed', detail: String(error.message || error) });
       }
     }
+    /* ---------- 资料目录：读取 / 切换（真入口，不是说明弹窗） ---------- */
+    if (pathname === apiPrefix + '/root' && services.dataRoot) {
+      try {
+        if (req.method === 'GET') return sendJson(res, 200, { dir: services.dataRoot() });
+        if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
+        const body = await readJsonBody(req);
+        const verdict = checkDataDir(body && body.dir);
+        if (!verdict.ok) return sendJson(res, 400, { error: verdict.reason, dir: services.dataRoot() });
+        return sendJson(res, 200, { dir: services.setDataRoot(body.dir) });
+      } catch (error) {
+        return sendJson(res, 400, { error: 'root 切换失败', detail: String(error.message || error), dir: services.dataRoot && services.dataRoot() });
+      }
+    }
+
+    /* ---------- 患者档案：列表 / 新建 / 删除（真实用户数据，与 demo 并存） ---------- */
+    if (pathname === apiPrefix + '/subjects' && services.createSubject) {
+      try {
+        if (req.method === 'GET') return sendJson(res, 200, { records: services.listSubjects() });
+        if (req.method === 'POST') return sendJson(res, 200, services.createSubject(await readJsonBody(req)));
+        if (req.method === 'DELETE') {
+          const key = new URL(req.url, 'http://localhost').searchParams.get('profileKey') || '';
+          return sendJson(res, 200, services.deleteSubject(key));
+        }
+        return sendJson(res, 405, { error: 'Method not allowed' });
+      } catch (error) {
+        return sendJson(res, 400, { error: '档案操作失败', detail: String(error.message || error) });
+      }
+    }
+
     if (pathname.startsWith(apiPrefix + '/')) return sendJson(res, 404, { error: 'Unknown API route' });
 
     /* ---------- 静态 ---------- */
